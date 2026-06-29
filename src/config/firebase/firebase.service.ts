@@ -29,6 +29,7 @@ export class FirebaseService implements OnModuleInit {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       };
 
+
       this.app = initializeApp({ credential: cert(serviceAccount) });
       this.logger.log('Firebase: loaded credentials from ENV vars');
     } else {
