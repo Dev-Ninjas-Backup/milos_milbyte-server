@@ -31,30 +31,30 @@ export class PassengerDetailDto {
   @ApiProperty({ example: 'John' })
   @IsString()
   @IsNotEmpty()
-  given_name: string;
+  given_name!: string;
 
   @ApiProperty({ example: 'Doe' })
   @IsString()
   @IsNotEmpty()
-  family_name: string;
+  family_name!: string;
 
   @ApiProperty({ example: '1990-01-01' })
   @IsDateString()
-  born_on: string;
+  born_on!: string;
 
   @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: '+14155551234' })
   @IsString()
   @IsNotEmpty()
-  phone_number: string;
+  phone_number!: string;
 
   @ApiProperty({ example: 'm', enum: ['m', 'f'] })
   @IsString()
   @IsIn(['m', 'f'])
-  gender: 'm' | 'f';
+  gender!: 'm' | 'f';
 }
 
 export class BookFlightDto {
@@ -68,7 +68,7 @@ export class BookFlightDto {
   @ArrayMinSize(1)
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
-  selected_offers: string[];
+  selected_offers!: string[];
 
   @ApiProperty({
     type: [PassengerDetailDto],
@@ -79,12 +79,12 @@ export class BookFlightDto {
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => PassengerDetailDto)
-  passengers: PassengerDetailDto[];
+  passengers!: PassengerDetailDto[];
 
   @ApiProperty({ example: 1, description: 'Authenticated user ID' })
   @IsInt()
   @Min(1)
-  userId: number;
+  userId!: number;
 
   @ApiProperty({
     example: 'ONE_WAY',
@@ -92,5 +92,5 @@ export class BookFlightDto {
   })
   @IsString()
   @IsIn(['ONE_WAY', 'ROUND_TRIP', 'MULTI_CITY'])
-  bookingType: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
+  bookingType!: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
 }
