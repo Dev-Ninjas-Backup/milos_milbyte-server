@@ -13,3 +13,7 @@ temp_interactive_push.bat
 config.bat
 .gitignore
 branch_structure.json
+
+# Firebase service account (secret - never commit)
+solara-ai-9160d-firebase-adminsdk-fbsvc-01c25a924c.json
+firebase-service-account.json

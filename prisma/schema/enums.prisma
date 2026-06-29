@@ -60,3 +60,11 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
 }
+
+enum NotificationType {
+  GENERAL
+  AI_RESPONSE
+  BOOKING
+  SUBSCRIPTION
+  ALERT
+}

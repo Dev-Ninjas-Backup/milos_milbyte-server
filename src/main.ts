@@ -32,6 +32,10 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
+  // Serve public/ folder at root (for notification-test.html & firebase-messaging-sw.js)
+  app.useStaticAssets(join(process.cwd(), 'public'));
+
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

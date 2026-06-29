@@ -26,6 +26,8 @@ model User {
   aiSessions    AiSession[]
   disputes      Dispute[]
   bookings      Booking[]
+  fcmTokens     UserFcmToken[]
+  notifications Notification[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }

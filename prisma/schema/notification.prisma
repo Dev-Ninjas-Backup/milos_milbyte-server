@@ -1,0 +1,23 @@
+model UserFcmToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  device    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int                @id @default(autoincrement())
+  userId    Int
+  title     String
+  body      String
+  data      Json?
+  type      NotificationType   @default(GENERAL)
+  isRead    Boolean            @default(false)
+  createdAt DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

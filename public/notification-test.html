@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🔔 Notification Test — Milos Milbyte</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',sans-serif;background:#0a0a1a;color:#e0e0ff;min-height:100vh}
+  :root{--blue:#6c63ff;--green:#00e5a0;--red:#ff4d6d;--card:#13132a;--border:#2a2a4a}
+  .header{background:linear-gradient(135deg,#13132a,#1a1a3e);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .badge{background:var(--red);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:4px;vertical-align:middle}
+  .badge.hidden{display:none}
+  .container{display:grid;grid-template-columns:300px 1fr 340px;height:calc(100vh - 61px)}
+  .panel{border-right:1px solid var(--border);overflow-y:auto;padding:20px}
+  .panel:last-child{border-right:none;border-left:1px solid var(--border)}
+  h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8888aa;margin-bottom:12px}
+  input{width:100%;background:#0d0d22;border:1px solid var(--border);color:#e0e0ff;border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:10px;outline:none}
+  input:focus{border-color:var(--blue)}
+  .btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s}
+  .btn-primary{background:linear-gradient(135deg,var(--blue),#8b5cf6);color:#fff}
+  .btn-green{background:linear-gradient(135deg,var(--green),#00b894);color:#000}
+  .btn-red{background:linear-gradient(135deg,var(--red),#c0392b);color:#fff;margin-top:8px}
+  .btn:hover{opacity:.85;transform:translateY(-1px)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .status{padding:8px 12px;border-radius:6px;font-size:13px;margin:8px 0;line-height:1.4}
+  .status.ok{background:#0d3320;color:var(--green);border:1px solid #00e5a033}
+  .status.err{background:#2d0d15;color:var(--red);border:1px solid #ff4d6d33}
+  .status.info{background:#13132a;color:#8888ff;border:1px solid var(--border)}
+  .chat-area{display:flex;flex-direction:column;height:100%}
+  .messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:82%;padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.5}
+  .msg.user{background:linear-gradient(135deg,var(--blue),#8b5cf6);align-self:flex-end;border-radius:12px 12px 2px 12px}
+  .msg.ai{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-radius:12px 12px 12px 2px}
+  .msg .lbl{font-size:11px;opacity:.6;margin-bottom:4px}
+  .input-row{padding:16px;border-top:1px solid var(--border);display:flex;gap:10px}
+  .input-row input{margin:0;flex:1}
+  .input-row .btn{width:auto;padding:10px 20px}
+  .notif-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:.15s}
+  .notif-item:hover{border-color:var(--blue)}
+  .notif-item.unread{border-left:3px solid var(--blue)}
+  .notif-item.live{border-left:3px solid var(--green);animation:glow .5s ease}
+  @keyframes glow{from{box-shadow:0 0 12px #00e5a055}to{box-shadow:none}}
+  .ntitle{font-size:14px;font-weight:600;margin-bottom:4px}
+  .nbody{font-size:13px;color:#aaaacc;margin-bottom:6px}
+  .nmeta{font-size:11px;color:#555577}
+  .token-box{background:#0d0d22;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:#6666aa;word-break:break-all;margin:8px 0}
+  .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-right:4px}
+  .pill.ai{background:#6c63ff22;color:var(--blue)}
+  .pill.live{background:#00e5a022;color:var(--green)}
+  .empty{text-align:center;color:#555577;font-size:13px;padding:40px 0}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot.green{background:var(--green);animation:pulse 1.5s infinite}
+  .dot.red{background:var(--red)}
+  .info-box{background:#0d0d22;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:#8888aa;margin-bottom:12px;line-height:1.6}
+  .info-box strong{color:#aaaaee}
+  .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:var(--blue);border-radius:50%;font-size:11px;font-weight:700;margin-right:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🔔 Milos Milbyte — Push Notification Tester</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span id="serverStatus" class="status info" style="margin:0;padding:5px 10px;font-size:12px">⏳ Server check...</span>
+    <span style="font-size:22px;cursor:pointer" onclick="loadNotifications()" title="Refresh">
+      🔔<span id="unreadBadge" class="badge hidden">0</span>
+    </span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- LEFT: Login Panel -->
+  <div class="panel">
+    <h3><span class="step-num">1</span>Status</h3>
+
+    <div class="info-box">
+      <div style="margin-bottom:6px">📱 <strong>FCM Token (Hardcoded)</strong></div>
+      <div style="font-size:10px;word-break:break-all;color:#6666aa" id="showToken"></div>
+    </div>
+
+    <div id="fcmStatus" class="status info">🔌 FCM Token ready — login করো</div>
+
+    <hr class="divider"/>
+
+    <h3><span class="step-num">2</span>Backend Login</h3>
+    <input id="email" type="email" placeholder="Email"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <button class="btn btn-green" onclick="login()">🔐 Login & Register Token</button>
+    <div id="loginStatus"></div>
+
+    <div id="loggedInfo" style="display:none">
+      <div class="token-box" id="sessionBox"></div>
+      <button class="btn btn-red" onclick="logout()">🚪 Logout & Remove FCM Token</button>
+    </div>
+  </div>
+
+  <!-- CENTER: AI Chat -->
+  <div class="chat-area">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="dot green"></span>
+        <span style="font-weight:600;font-size:15px">AI Chat</span>
+        <span style="margin-left:8px;font-size:12px;color:#666688">— message পাঠাও → push notification আসবে</span>
+      </div>
+      <div id="sessionInfo" style="font-size:11px;color:#555577">Login করলে session শুরু হবে...</div>
+    </div>
+    <div class="messages" id="messages">
+      <div class="empty">🤖 Login করো এবং AI-কে কিছু জিজ্ঞেস করো<br/><br/>AI reply করলে push notification যাবে<br/>তোমার registered device-এ 📲</div>
+    </div>
+    <div class="input-row">
+      <input id="msgInput" placeholder="Type message... (Enter to send)" onkeydown="if(event.key==='Enter')sendMsg()" disabled/>
+      <button class="btn btn-primary" id="sendBtn" onclick="sendMsg()" disabled>Send 🚀</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Notification Inbox -->
+  <div class="panel">
+    <div style="display:flex;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0"><span class="step-num">3</span>Notification Inbox</h3>
+      <button onclick="loadNotifications()" style="margin-left:auto;background:none;border:1px solid var(--border);color:#8888aa;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🔄</button>
+    </div>
+    <div id="pollStatus" style="font-size:11px;color:#555577;margin-bottom:10px">Auto-refresh: every 10s</div>
+    <div id="notifList"><div class="empty">Notifications এখানে দেখাবে</div></div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  HARDCODED CONFIG — সব এখানেই আছে
+// ════════════════════════════════════════════════════════
+const API        = 'http://localhost:5000';
+const FCM_TOKEN  = 'dfbwG-V4Rs-fZxxp4IUmsH:APA91bGXOh0AqVOC6AQH1pTdA6KlUTlqweHWjLKUh6NDT-3f6lfs0Km4Fsvgl5rveG81KKahGuKRteVCE1JSe1XJmTBvyOcerJ2tWbHkW4m-se5jvShnUI8';
+const DEVICE     = 'Test Browser Device';
+
+// ════════════════════════════════════════════════════════
+let jwt       = localStorage.getItem('mm_jwt') || '';
+let sessionId = localStorage.getItem('mm_session') || '';
+let pollTimer = null;
+
+// Show token preview
+document.getElementById('showToken').textContent =
+  FCM_TOKEN.substring(0, 30) + '...' + FCM_TOKEN.substring(FCM_TOKEN.length - 15);
+
+// ── Server check ────────────────────────────────────────
+async function checkServer() {
+  try {
+    await fetch(`${API}/docs-json`, {signal: AbortSignal.timeout(3000)});
+    setEl('serverStatus', 'status ok', '✅ Server Online :5000');
+  } catch {
+    setEl('serverStatus', 'status err', '❌ Server Offline');
+  }
+}
+
+// ── Login ───────────────────────────────────────────────
+async function login() {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  if (!email || !password) { setEl('loginStatus','status err','❌ Email ও Password দাও'); return; }
+
+  setEl('loginStatus','status info','⏳ Logging in...');
+  try {
+    const r = await post('/auth/login', {email, password}, false);
+    jwt = r.data?.accessToken || r.data?.access_token || r.accessToken || r.access_token || r.data?.token || r.token;
+    if (!jwt) throw new Error('JWT not found in response: ' + JSON.stringify(r));
+
+    localStorage.setItem('mm_jwt', jwt);
+    // Clear old session — different user could have different sessions
+    sessionId = '';
+    localStorage.removeItem('mm_session');
+    setEl('loginStatus','status ok','✅ Login সফল!');
+
+    // Register FCM token
+    await registerFcmToken();
+
+    // Create or restore session
+    await ensureSession();
+
+    // Enable chat
+    document.getElementById('msgInput').disabled  = false;
+    document.getElementById('sendBtn').disabled   = false;
+    document.getElementById('loggedInfo').style.display = 'block';
+
+    // Load notifications & start polling
+    await loadNotifications();
+    startPolling();
+
+  } catch(e) {
+    setEl('loginStatus','status err','❌ ' + e.message);
+  }
+}
+
+// ── Register FCM token with backend ─────────────────────
+async function registerFcmToken() {
+  try {
+    await post('/notifications/register-token', {token: FCM_TOKEN, device: DEVICE});
+    setEl('fcmStatus','status ok','✅ FCM Token registered with backend!');
+  } catch(e) {
+    setEl('fcmStatus','status err','⚠️ Token register failed: ' + e.message);
+  }
+}
+
+// ── Create / restore AI session ─────────────────────────
+async function ensureSession() {
+  // Step 1: Try existing saved session
+  if (sessionId) {
+    document.getElementById('sessionInfo').textContent = '📋 Session: ' + sessionId;
+    document.getElementById('sessionBox').textContent  = '📋 Session ID: ' + sessionId;
+    addMsg('ai', '✅ Previous session restored! Message পাঠাও।');
+    return;
+  }
+
+  // Step 2: Fetch existing sessions from backend
+  try {
+    const r = await get('/ai/sessions');
+    const sessions = r.data || r;
+    if (Array.isArray(sessions) && sessions.length > 0) {
+      sessionId = sessions[0].session_id;
+      localStorage.setItem('mm_session', sessionId);
+      document.getElementById('sessionInfo').textContent = '📋 Existing Session: ' + sessionId;
+      document.getElementById('sessionBox').textContent  = '📋 Session ID: ' + sessionId;
+      addMsg('ai', '✅ Existing session found! Message পাঠাও।');
+      return;
+    }
+  } catch(e) {
+    console.warn('Could not fetch sessions:', e.message);
+  }
+
+  // Step 3: Create new session
+  try {
+    const r = await post('/ai/generate-ai-response-new-session', {message: 'Hi!'});
+    sessionId = r.session_id || r.data?.session_id;
+    if (sessionId) {
+      localStorage.setItem('mm_session', sessionId);
+      document.getElementById('sessionInfo').textContent = '📋 New Session: ' + sessionId;
+      document.getElementById('sessionBox').textContent  = '📋 Session ID: ' + sessionId;
+      addMsg('ai', r.ai_message || 'Session শুরু! কিছু জিজ্ঞেস করো।');
+    }
+  } catch(e) {
+    // Subscription error — still allow manual session input
+    document.getElementById('sessionInfo').innerHTML =
+      `⚠️ <span style="color:#ff4d6d">${e.message}</span><br>
+       <input id="manualSession" placeholder="Session ID manually দাও..." style="margin-top:6px;font-size:12px;padding:6px"/>
+       <button onclick="setManualSession()" style="background:var(--blue);color:#fff;border:none;padding:5px 10px;border-radius:5px;margin-top:4px;cursor:pointer;font-size:12px">Set Session</button>`;
+  }
+}
+
+function setManualSession() {
+  const val = document.getElementById('manualSession')?.value?.trim();
+  if (!val) return;
+  sessionId = val;
+  localStorage.setItem('mm_session', sessionId);
+  document.getElementById('sessionInfo').textContent = '📋 Session: ' + sessionId;
+  document.getElementById('sessionBox').textContent  = '📋 Session ID: ' + sessionId;
+  addMsg('ai', '✅ Session set! Message পাঠাও।');
+}
+
+
+// ── Send AI message ─────────────────────────────────────
+async function sendMsg() {
+  const input = document.getElementById('msgInput');
+  const msg   = input.value.trim();
+  if (!msg || !jwt || !sessionId) return;
+
+  input.value = '';
+  addMsg('user', msg);
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  try {
+    const r = await post(`/ai/sessions/${sessionId}/message`, {message: msg});
+    addMsg('ai', r.ai_message || r.data?.ai_message || '(no ai_message in response)');
+    // refresh notifications after AI responds
+    setTimeout(loadNotifications, 3000);
+    setTimeout(loadNotifications, 7000);
+  } catch(e) {
+    if (e.message.toLowerCase().includes('session not found') || e.message.includes('404')) {
+      // Stale session — clear and re-fetch
+      sessionId = '';
+      localStorage.removeItem('mm_session');
+      addMsg('ai', '⚠️ পুরনো session expired। নতুন session খুঁজছি...');
+      await ensureSession();
+    } else {
+      addMsg('ai', '❌ Error: ' + e.message);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send 🚀';
+  }
+}
+
+// ── Load notifications from backend ─────────────────────
+let lastCount = 0;
+async function loadNotifications() {
+  if (!jwt) return;
+  try {
+    const r = await get('/notifications?page=1&limit=30');
+    const list   = r.data?.data || r.data || [];
+    const unread = r.data?.meta?.unread ?? 0;
+    const total  = r.data?.meta?.total  ?? list.length;
+
+    // Badge
+    const badge = document.getElementById('unreadBadge');
+    if (unread > 0) { badge.classList.remove('hidden'); badge.textContent = unread; }
+    else              badge.classList.add('hidden');
+
+    // New notification arrived?
+    if (list.length > lastCount && lastCount > 0) {
+      document.getElementById('pollStatus').textContent = '🔔 নতুন notification এসেছে! — ' + new Date().toLocaleTimeString();
+    }
+    lastCount = list.length;
+
+    const el = document.getElementById('notifList');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty">এখনো কোনো notification নেই<br/>AI message পাঠাও</div>';
+      return;
+    }
+
+    el.innerHTML = list.map(n => `
+      <div class="notif-item ${n.isRead ? '' : 'unread'}" onclick="markRead(${n.id}, this)">
+        <div class="ntitle">
+          <span class="pill ${n.type==='AI_RESPONSE'?'ai':'live'}">${n.type}</span>
+          ${escHtml(n.title)}
+        </div>
+        <div class="nbody">${escHtml(n.body)}</div>
+        <div class="nmeta">
+          ${new Date(n.createdAt).toLocaleString('bn-BD')}
+          ${n.isRead ? ' · ✅ পড়া হয়েছে' : ' · 🔵 নতুন'}
+        </div>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    document.getElementById('pollStatus').textContent = '⚠️ Load error: ' + e.message;
+  }
+}
+
+async function markRead(id, el) {
+  try {
+    await patch(`/notifications/${id}/read`);
+    el.classList.remove('unread');
+    loadNotifications();
+  } catch {}
+}
+
+// ── Polling ─────────────────────────────────────────────
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    loadNotifications();
+    document.getElementById('pollStatus').textContent =
+      '🔄 Last refresh: ' + new Date().toLocaleTimeString();
+  }, 10000);
+}
+
+// ── Logout ───────────────────────────────────────────────
+async function logout() {
+  try { await del(`/notifications/remove-token/${encodeURIComponent(FCM_TOKEN)}`); } catch {}
+  jwt = ''; sessionId = '';
+  localStorage.removeItem('mm_jwt');
+  localStorage.removeItem('mm_session');
+  if (pollTimer) clearInterval(pollTimer);
+  document.getElementById('msgInput').disabled = true;
+  document.getElementById('sendBtn').disabled  = true;
+  document.getElementById('loggedInfo').style.display = 'none';
+  document.getElementById('messages').innerHTML = '<div class="empty">🤖 Login করো আবার</div>';
+  document.getElementById('notifList').innerHTML = '<div class="empty">Logout হয়ে গেছে</div>';
+  document.getElementById('unreadBadge').classList.add('hidden');
+  setEl('loginStatus','status info','ℹ️ Logged out — FCM token removed');
+  setEl('fcmStatus','status info','🔌 FCM Token ready — login করো');
+}
+
+// ── Helpers ──────────────────────────────────────────────
+async function post(path, body, auth=true) {
+  const h = {'Content-Type':'application/json'};
+  if (auth) h['Authorization'] = 'Bearer ' + jwt;
+  const r = await fetch(API+path, {method:'POST', headers:h, body:JSON.stringify(body)});
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message || JSON.stringify(d));
+  return d;
+}
+async function get(path) {
+  const r = await fetch(API+path, {headers:{'Authorization':'Bearer '+jwt}});
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message||r.statusText);
+  return d;
+}
+async function patch(path) {
+  const r = await fetch(API+path, {method:'PATCH', headers:{'Authorization':'Bearer '+jwt}});
+  return r.json();
+}
+async function del(path) {
+  const r = await fetch(API+path, {method:'DELETE', headers:{'Authorization':'Bearer '+jwt}});
+  return r.json();
+}
+function addMsg(role, text) {
+  const el = document.getElementById('messages');
+  if (el.querySelector('.empty')) el.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  d.innerHTML = `<div class="lbl">${role==='user'?'👤 তুমি':'🤖 AI'}</div>${escHtml(text)}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+function setEl(id, cls, txt) {
+  const e = document.getElementById(id);
+  e.className = cls; e.textContent = txt;
+}
+function escHtml(s='') {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Boot ─────────────────────────────────────────────────
+checkServer();
+setInterval(checkServer, 30000);
+
+// Restore session if already logged in
+if (jwt) {
+  setEl('loginStatus','status ok','✅ Session restored');
+  document.getElementById('loggedInfo').style.display = 'block';
+  document.getElementById('msgInput').disabled  = false;
+  document.getElementById('sendBtn').disabled   = false;
+  if (sessionId) {
+    document.getElementById('sessionInfo').textContent = '📋 Session: ' + sessionId;
+    document.getElementById('sessionBox').textContent  = '📋 Session ID: ' + sessionId;
+  }
+  setEl('fcmStatus','status ok','✅ FCM Token registered');
+  loadNotifications();
+  startPolling();
+}
+</script>
+</body>
+</html>

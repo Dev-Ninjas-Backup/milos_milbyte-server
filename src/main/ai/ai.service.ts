@@ -4,10 +4,16 @@ import { PrismaService } from 'src/config/prisma/prisma.service';
 import { CreateAiDto } from './dto/create-ai.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { aiResponse } from 'src/config/ai/ai-response';
+import { NotificationService } from 'src/main/notification/notification.service';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class AiService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) { }
+
 
   async createAIResponse(createAiDto: CreateAiDto, userId: number) {
     const userExists = await this.prisma.user.findUnique({
@@ -127,8 +133,31 @@ export class AiService {
       (aiResponseData as any).message_id = message.id;
     } catch { }
 
+    // Send push notification to the user (fire-and-forget)
+    const notificationTitle = 'AI Assistant';
+    const notificationBody = aiResponseData?.ai_message
+      ? aiResponseData.ai_message.substring(0, 100) + (aiResponseData.ai_message.length > 100 ? '...' : '')
+      : 'Your AI assistant has responded to your message.';
+
+    this.notificationService
+      .sendToUser(
+        userId,
+        notificationTitle,
+        notificationBody,
+        NotificationType.AI_RESPONSE,
+        {
+          session_id: session.sessionId,
+          message_id: String(message.id),
+          type: 'ai_response',
+        },
+      )
+      .catch(() => {
+        // Silently ignore notification errors so the main flow is unaffected
+      });
+
     return aiResponseData;
   }
+
 
   async getAllSessions(userId: number) {
     const sessions = await this.prisma.aiSession.findMany({
