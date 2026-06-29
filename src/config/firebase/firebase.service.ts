@@ -7,7 +7,6 @@ import {
   MulticastMessage,
   BatchResponse,
 } from 'firebase-admin/messaging';
-import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ServiceAccount } from 'firebase-admin';
 
@@ -19,18 +18,19 @@ export class FirebaseService implements OnModuleInit {
 
   onModuleInit() {
     if (getApps().length === 0) {
-      // Load the service account JSON file at runtime (avoids env var / OpenSSL parsing issues)
-      const serviceAccountPath = join(
-        process.cwd(),
-        'solara-ai-9160d-firebase-adminsdk-fbsvc-01c25a924c.json',
-      );
-      const serviceAccount: ServiceAccount = JSON.parse(
-        readFileSync(serviceAccountPath, 'utf-8'),
-      );
+      // Load credentials from ENV vars (.env file — works both locally and on VPS)
+      if (!process.env.FIREBASE_PROJECT_ID) {
+        throw new Error('FIREBASE_PROJECT_ID env var is missing!');
+      }
 
-      this.app = initializeApp({
-        credential: cert(serviceAccount),
-      });
+      const serviceAccount: ServiceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      };
+
+      this.app = initializeApp({ credential: cert(serviceAccount) });
+      this.logger.log('Firebase: loaded credentials from ENV vars');
     } else {
       this.app = getApps()[0];
     }
