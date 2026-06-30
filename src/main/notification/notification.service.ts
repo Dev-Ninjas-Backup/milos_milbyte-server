@@ -11,7 +11,7 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly firebase: FirebaseService,
-  ) {}
+  ) { }
 
   /**
    * Register or update a user's FCM token

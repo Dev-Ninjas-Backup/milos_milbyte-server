@@ -30,7 +30,7 @@ import { UserRoles } from '@prisma/client';
 @UseGuards(AuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) { }
 
   /**
    * Register FCM device token

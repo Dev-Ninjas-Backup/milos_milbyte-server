@@ -7,7 +7,6 @@ import {
   MulticastMessage,
   BatchResponse,
 } from 'firebase-admin/messaging';
-import { join } from 'path';
 import { ServiceAccount } from 'firebase-admin';
 
 @Injectable()

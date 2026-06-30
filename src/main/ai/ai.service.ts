@@ -133,27 +133,24 @@ export class AiService {
       (aiResponseData as any).message_id = message.id;
     } catch { }
 
-    // Send push notification to the user (fire-and-forget)
-    const notificationTitle = 'AI Assistant';
-    const notificationBody = aiResponseData?.ai_message
-      ? aiResponseData.ai_message.substring(0, 100) + (aiResponseData.ai_message.length > 100 ? '...' : '')
-      : 'Your AI assistant has responded to your message.';
+    // Send push notification — only the AI response text (fire-and-forget)
+    const aiText: string = aiResponseData?.ai_message ?? '';
+    const notificationBody = aiText.length > 0
+      ? aiText.substring(0, 150) + (aiText.length > 150 ? '...' : '')
+      : 'Your AI assistant has responded.';
 
     this.notificationService
       .sendToUser(
         userId,
-        notificationTitle,
+        'AI Assistant Reply',
         notificationBody,
         NotificationType.AI_RESPONSE,
         {
           session_id: session.sessionId,
           message_id: String(message.id),
-          type: 'ai_response',
         },
       )
-      .catch(() => {
-        // Silently ignore notification errors so the main flow is unaffected
-      });
+      .catch(() => { /* silently ignore — must not break main response */ });
 
     return aiResponseData;
   }
