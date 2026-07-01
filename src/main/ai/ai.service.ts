@@ -213,6 +213,9 @@ export class AiService {
       orderBy: { createdAt: 'desc' },
     });
 
+    if (!sessions || sessions.length === 0) {
+      throw new NotFoundException('No sessions found for the user');
+    }
     this.logger.log(`[AI] Found ${sessions.length} sessions for userId=${userId}`);
 
     const suggestions = sessions.flatMap((session) =>
