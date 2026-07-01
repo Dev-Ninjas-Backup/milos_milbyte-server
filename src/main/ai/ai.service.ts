@@ -17,17 +17,17 @@ export class AiService {
 
 
   async createAIResponse(createAiDto: CreateAiDto, userId: number) {
-    this.logger.log(`Creating AI response for user ID: ${userId}`);
+    this.logger.log(`[AI] Starting createAIResponse for userId=${userId}`);
+    this.logger.debug(`[AI] Request payload: ${JSON.stringify(createAiDto)}`);
+
     const userExists = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!userExists) {
-      this.logger.error(`User with ID ${userId} not found`);
+      this.logger.error(`[AI] User not found for userId=${userId}`);
       throw new NotFoundException('User not found');
     }
-
-
 
     const session = await this.prisma.aiSession.create({
       data: {
@@ -36,8 +36,9 @@ export class AiService {
       },
     });
 
-    this.logger.log(`Created new AI session with ID: ${session.sessionId} for user ID: ${userId}`);
-    // Send message to this session
+    this.logger.log(`[AI] Created session sessionId=${session.sessionId} for userId=${userId}`);
+    this.logger.debug(`[AI] Sending initial message to sessionId=${session.sessionId}`);
+
     return await this.sendMessageToSession(userId, session.sessionId, {
       message: createAiDto.message,
     });
@@ -48,7 +49,9 @@ export class AiService {
     sessionId: string,
     sendMessageDto: SendMessageDto,
   ) {
-    this.logger.log(`Sending message to session ID: ${sessionId} for user ID: ${userId}`);
+    this.logger.log(`[AI] Sending message to sessionId=${sessionId} for userId=${userId}`);
+    this.logger.debug(`[AI] Message payload: ${JSON.stringify(sendMessageDto)}`);
+
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -57,30 +60,27 @@ export class AiService {
     });
 
     if (!session) {
-      this.logger.error(`Session with ID ${sessionId} not found for user ID: ${userId}`);
+      this.logger.error(`[AI] Session not found sessionId=${sessionId} userId=${userId}`);
       throw new NotFoundException('Session not found');
     }
 
     const userExists = await this.prisma.user.findUnique({
       where: { id: userId },
     });
-    this.logger.log(`Checking if user with ID ${userId} exists`);
 
     if (!userExists) {
-      this.logger.error(`User with ID ${userId} not found`);
+      this.logger.error(`[AI] User not found userId=${userId}`);
       throw new NotFoundException('User not found');
     }
 
-    const activeSubscriptionPlan = await this.prisma.userSubscription.findFirst(
-      {
-        where: { userId },
-        include: { plan: true },
-      },
-    );
+    const activeSubscriptionPlan = await this.prisma.userSubscription.findFirst({
+      where: { userId },
+      include: { plan: true },
+    });
 
-    this.logger.log(`Active subscription plan for user ID ${userId}: ${activeSubscriptionPlan?.planType || 'None'}`);
+    this.logger.log(`[AI] Subscription plan for userId=${userId}: ${activeSubscriptionPlan?.planType || 'None'}`);
     if (!activeSubscriptionPlan) {
-      this.logger.error(`No active subscription plan found for user ID: ${userId}`);
+      this.logger.error(`[AI] No active subscription plan for userId=${userId}`);
       throw new NotFoundException(
         'No active subscription plan found for the user',
       );
@@ -90,31 +90,32 @@ export class AiService {
       message: sendMessageDto.message,
       session_id: session.sessionId,
       user_id: String(userId),
-      // subscription_plan: activeSubscriptionPlan.planType.toLowerCase(),
       subscription_plan: 'pro',
     };
 
-    // Get AI response
+    this.logger.debug(`[AI] Payload sent to AI service: ${JSON.stringify(payload)}`);
+
     const aiResponseData = await aiResponse(payload);
-    this.logger.log(`AI response received for session ID: ${sessionId} and user ID: ${userId}`);
+    this.logger.log(`[AI] AI response received for sessionId=${sessionId} userId=${userId}`);
+    this.logger.debug(`[AI] AI response data: ${JSON.stringify(aiResponseData)}`);
+
     if (aiResponseData.rate_limit_exceeded === true) {
-      this.logger.warn(`Rate limit exceeded for user ID: ${userId} on plan: ${activeSubscriptionPlan.plan.name}`);
+      this.logger.warn(`[AI] Rate limit exceeded for userId=${userId} plan=${activeSubscriptionPlan.plan.name}`);
       throw new HttpException(
         `You are currently on the ${activeSubscriptionPlan.plan.name} plan. You have reached the AI message limit. Please upgrade to continue using the AI assistant.`,
         429,
       );
     }
 
-    // attach client message into the AI response payload
     try {
-      this.logger.log(`Attaching client message and current plan to AI response for session ID: ${sessionId}`);
+      this.logger.debug(`[AI] Attaching response metadata for sessionId=${sessionId}`);
       (aiResponseData as any).client_message = sendMessageDto.message;
       (aiResponseData as any).current_plan = {
         name: activeSubscriptionPlan.plan.name,
         tier: activeSubscriptionPlan.planType,
       };
     } catch {
-      this.logger.error(`Failed to attach client message and current plan to AI response for session ID: ${sessionId}`);
+      this.logger.error(`[AI] Failed to attach metadata for sessionId=${sessionId}`);
     }
 
     const message = await this.prisma.aiMessage.create({
@@ -131,12 +132,15 @@ export class AiService {
         extractedData: aiResponseData?.parameters_extracted,
       },
     });
-    // include stored message id in response object
+
+    this.logger.log(`[AI] Stored AI message messageId=${message.id} for sessionId=${sessionId}`);
+
     try {
       (aiResponseData as any).message_id = message.id;
-    } catch { }
+    } catch {
+      this.logger.warn(`[AI] Could not attach message_id to response for sessionId=${sessionId}`);
+    }
 
-    // Send push notification — only the AI response text (fire-and-forget)
     const aiText: string = aiResponseData?.ai_message ?? '';
     const notificationBody = aiText.length > 0
       ? aiText.substring(0, 150) + (aiText.length > 150 ? '...' : '')
@@ -153,13 +157,16 @@ export class AiService {
           message_id: String(message.id),
         },
       )
-      .catch(() => { /* silently ignore — must not break main response */ });
+      .catch(() => {
+        this.logger.warn(`[AI] Notification send failed for userId=${userId} sessionId=${sessionId}`);
+      });
 
     return aiResponseData;
   }
 
 
   async getAllSessions(userId: number) {
+    this.logger.log(`[AI] Fetching all sessions for userId=${userId}`);
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
       select: {
@@ -195,7 +202,7 @@ export class AiService {
   }
 
   async getAllSessionSuggestionsForUser(userId: number) {
-    this.logger.log(`Fetching all session suggestions for user ID: ${userId}`);
+    this.logger.log(`[AI] Fetching all suggestions for userId=${userId}`);
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
       include: {
@@ -205,6 +212,8 @@ export class AiService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    this.logger.log(`[AI] Found ${sessions.length} sessions for userId=${userId}`);
 
     const suggestions = sessions.flatMap((session) =>
       session.messages
@@ -245,6 +254,8 @@ export class AiService {
           };
         }),
     );
+
+    this.logger.log(`[AI] Returning ${suggestions.length} suggestions for userId=${userId}`);
 
     return {
       user_id: String(userId),
@@ -317,6 +328,7 @@ export class AiService {
    * Get a specific session with all its messages
    */
   async getSessionAllMessagesById(userId: number, sessionId: string) {
+    this.logger.log(`[AI] Fetching messages for sessionId=${sessionId} userId=${userId}`);
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -330,8 +342,11 @@ export class AiService {
     });
 
     if (!session) {
+      this.logger.error(`[AI] Session not found sessionId=${sessionId} userId=${userId}`);
       throw new NotFoundException('Session not found');
     }
+
+    this.logger.log(`[AI] Found ${session.messages.length} message(s) for sessionId=${sessionId}`);
 
     return session.messages.map((message) => {
       const extractedData = message.extractedData as any || {};
@@ -368,6 +383,7 @@ export class AiService {
    * Delete a session
    */
   async deleteSession(userId: number, sessionId: string) {
+    this.logger.log(`[AI] Deleting session sessionId=${sessionId} userId=${userId}`);
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -376,6 +392,7 @@ export class AiService {
     });
 
     if (!session) {
+      this.logger.error(`[AI] Session not found for deletion sessionId=${sessionId} userId=${userId}`);
       throw new NotFoundException('Session not found');
     }
 
@@ -383,6 +400,7 @@ export class AiService {
       where: { sessionId },
     });
 
+    this.logger.log(`[AI] Session deleted successfully sessionId=${sessionId}`);
     return { message: 'Session deleted successfully', sessionId };
   }
 }
