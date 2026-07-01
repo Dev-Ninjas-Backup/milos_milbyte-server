@@ -89,6 +89,19 @@ export class AiController {
   }
 
   /**
+   * Get all session suggestions and picture data for the UI across all user sessions
+   */
+  @Get('sessions/suggestions')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRoles.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all session suggestions with picture/media data' })
+  async getAllSessionSuggestions(@Req() req) {
+    return await this.aiService.getAllSessionSuggestionsForUser(req.user.sub);
+  }
+
+
+  /**
    * Delete a session
    */
   @Delete('sessions/:sessionId')
