@@ -165,6 +165,7 @@ export class AiService {
   }
 
 
+  // get all sessions 
   async getAllSessions(userId: number) {
     this.logger.log(`[AI] Fetching all sessions for userId=${userId}`);
     const sessions = await this.prisma.aiSession.findMany({
@@ -201,6 +202,8 @@ export class AiService {
     }));
   }
 
+
+  // 
   async getAllSessionSuggestionsForUser(userId: number) {
     this.logger.log(`[AI] Fetching all suggestions for userId=${userId}`);
     const sessions = await this.prisma.aiSession.findMany({
@@ -213,119 +216,42 @@ export class AiService {
       orderBy: { createdAt: 'desc' },
     });
 
+    this.logger.debug(
+      `[AI] Loaded ${sessions.length} session(s) for suggestion aggregation for userId=${userId}`,
+    );
+
     if (!sessions || sessions.length === 0) {
       throw new NotFoundException('No sessions found for the user');
     }
-    this.logger.log(`[AI] Found ${sessions.length} sessions for userId=${userId}`);
 
-    const suggestions = sessions.flatMap((session) =>
-      session.messages
-        .filter((message) => Boolean(message.tripCard || message.tripGuide))
-        .map((message) => {
-          const extractedData = (message.extractedData as Record<string, any>) || {};
-          const pictures = this.extractPictureData({
-            tripCard: message.tripCard,
-            tripGuide: message.tripGuide,
-            aiMessage: message.aiMessage,
-            clientMessage: message.clientMessage,
-          });
+    return sessions.map((session) => {
+      let location: string | null = null;
+      let budget: string | null = null;
 
-          return {
-            session_id: session.sessionId,
-            message_id: message.id,
-            client_message: message.clientMessage,
-            ai_message: message.aiMessage,
-            current_step: message.currentStep,
-            parameters_extracted: {
-              location: extractedData?.location || null,
-              start_date: extractedData?.start_date || null,
-              end_date: extractedData?.end_date || null,
-              travelers: extractedData?.travelers || null,
-              budget: extractedData?.budget || null,
-              experience: extractedData?.experience || null,
-              citizenship: extractedData?.citizenship || null,
-              passengers: extractedData?.passengers || null,
-              passenger_preferences: extractedData?.passenger_preferences || null,
-            },
-            submitted: message.submitted,
-            checkout_required: message.checkoutRequired,
-            trip_cards: message.tripCard ?? [],
-            trip_guide: message.tripGuide ?? [],
-            pictures,
-            created_at: message.createdAt,
-            updated_at: message.updatedAt,
-          };
-        }),
-    );
+      // Walk messages in order; last non-null value wins
+      for (const msg of session.messages) {
+        const extracted = (msg.extractedData as any) || {};
+        if (extracted.location) location = extracted.location;
+        if (extracted.budget) budget = extracted.budget;
+      }
 
-    this.logger.log(`[AI] Returning ${suggestions.length} suggestions for userId=${userId}`);
+      return {
+        session_id: session.sessionId,
+        location,
+        budget,
+        created_at: session.createdAt,
+        updated_at: session.updatedAt,
+      };
+    });
 
-    return {
-      user_id: String(userId),
-      total_sessions: sessions.length,
-      total_suggestions: suggestions.length,
-      suggestions,
-    };
+
+
+
+
   }
 
 
-  private extractPictureData(payload: unknown): Array<{ key: string; value: string }> {
-    const pictures: Array<{ key: string; value: string }> = [];
-    const seen = new Set<string>();
 
-    const visit = (value: unknown, path = '') => {
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => visit(item, `${path}[${index}]`));
-        return;
-      }
-
-      if (!value || typeof value !== 'object') {
-        return;
-      }
-
-      const record = value as Record<string, any>;
-      const imageKeys = [
-        'image',
-        'images',
-        'picture',
-        'pictures',
-        'imageUrl',
-        'image_url',
-        'thumbnail',
-        'thumbnailUrl',
-        'preview',
-        'photo',
-        'photos',
-        'media',
-        'url',
-        'src',
-      ];
-
-      for (const key of imageKeys) {
-        const candidate = record[key];
-        if (typeof candidate === 'string' && candidate.trim()) {
-          const signature = `${path}.${key}:${candidate}`;
-          if (!seen.has(signature)) {
-            seen.add(signature);
-            pictures.push({
-              key: path ? `${path}.${key}` : key,
-              value: candidate,
-            });
-          }
-        }
-      }
-
-      for (const [key, child] of Object.entries(record)) {
-        if (imageKeys.includes(key)) {
-          continue;
-        }
-        visit(child, path ? `${path}.${key}` : key);
-      }
-    };
-
-    visit(payload);
-    return pictures;
-  }
 
   /**
    * Get a specific session with all its messages
