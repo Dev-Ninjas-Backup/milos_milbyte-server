@@ -6,9 +6,7 @@ import {
   Req,
   Get,
   Param,
-  Put,
   Delete,
-  Patch,
 } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { CreateAiDto } from './dto/create-ai.dto';
