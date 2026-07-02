@@ -7,19 +7,37 @@ import { aiResponse } from 'src/config/ai/ai-response';
 import { NotificationService } from 'src/main/notification/notification.service';
 import { NotificationType } from '@prisma/client';
 
+/**
+ * Service handling all AI interaction operations, including:
+ * - Initiating new AI chat sessions.
+ * - Sending messages, querying external AI engines, and saving messages.
+ * - Tracking and processing subscription limits/rate limiting.
+ * - Generating user suggestions.
+ * - Managing session histories (fetch & delete).
+ * - Asynchronously notifying users of AI responses.
+ */
 @Injectable()
 export class AiService {
-  logger = new Logger(AiService.name);
+  private readonly logger = new Logger(AiService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
   ) { }
 
-
+  /**
+   * Initializes a new AI chat session for a user and sends the first message.
+   * 
+   * @param createAiDto - Data Transfer Object containing the initial message text.
+   * @param userId - The unique identifier of the user creating the session.
+   * @returns The AI's response data generated for the first message.
+   * @throws NotFoundException if the user does not exist in the database.
+   */
   async createAIResponse(createAiDto: CreateAiDto, userId: number) {
     this.logger.log(`[AI] Starting createAIResponse for userId=${userId}`);
     this.logger.debug(`[AI] Request payload: ${JSON.stringify(createAiDto)}`);
 
+    // Verify that the user exists before initiating a session
     const userExists = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -29,6 +47,7 @@ export class AiService {
       throw new NotFoundException('User not found');
     }
 
+    // Create a new AI session with a unique UUID
     const session = await this.prisma.aiSession.create({
       data: {
         userId,
@@ -39,11 +58,23 @@ export class AiService {
     this.logger.log(`[AI] Created session sessionId=${session.sessionId} for userId=${userId}`);
     this.logger.debug(`[AI] Sending initial message to sessionId=${session.sessionId}`);
 
+    // Forward the initial message to the newly created session
     return await this.sendMessageToSession(userId, session.sessionId, {
       message: createAiDto.message,
     });
   }
 
+  /**
+   * Sends a message within an existing AI session, queries the external AI engine,
+   * stores the conversation in the database, and sends a push notification to the user.
+   * 
+   * @param userId - The ID of the user sending the message.
+   * @param sessionId - The UUID of the active session.
+   * @param sendMessageDto - DTO containing the user's message.
+   * @returns The processed AI response with metadata.
+   * @throws NotFoundException if session or user is not found, or if the user lacks a subscription plan.
+   * @throws HttpException (429 Status) if the AI rate limit has been exceeded.
+   */
   async sendMessageToSession(
     userId: number,
     sessionId: string,
@@ -52,6 +83,7 @@ export class AiService {
     this.logger.log(`[AI] Sending message to sessionId=${sessionId} for userId=${userId}`);
     this.logger.debug(`[AI] Message payload: ${JSON.stringify(sendMessageDto)}`);
 
+    // 1. Verify the session exists and belongs to the requesting user
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -64,6 +96,7 @@ export class AiService {
       throw new NotFoundException('Session not found');
     }
 
+    // 2. Verify the user exists
     const userExists = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -73,6 +106,7 @@ export class AiService {
       throw new NotFoundException('User not found');
     }
 
+    // 3. Fetch user subscription details to determine access tiers and limits
     const activeSubscriptionPlan = await this.prisma.userSubscription.findFirst({
       where: { userId },
       include: { plan: true },
@@ -86,6 +120,7 @@ export class AiService {
       );
     }
 
+    // 4. Construct payload for the external AI engine/microservice
     const payload = {
       message: sendMessageDto.message,
       session_id: session.sessionId,
@@ -95,10 +130,12 @@ export class AiService {
 
     this.logger.debug(`[AI] Payload sent to AI service: ${JSON.stringify(payload)}`);
 
+    // 5. Call external AI module to generate recommendations/reply
     const aiResponseData = await aiResponse(payload);
     this.logger.log(`[AI] AI response received for sessionId=${sessionId} userId=${userId}`);
     this.logger.debug(`[AI] AI response data: ${JSON.stringify(aiResponseData)}`);
 
+    // 6. Handle rate limits based on subscription constraints
     if (aiResponseData.rate_limit_exceeded === true) {
       this.logger.warn(`[AI] Rate limit exceeded for userId=${userId} plan=${activeSubscriptionPlan.plan.name}`);
       throw new HttpException(
@@ -107,6 +144,7 @@ export class AiService {
       );
     }
 
+    // 7. Inject client message and current subscription tier into response metadata
     try {
       this.logger.debug(`[AI] Attaching response metadata for sessionId=${sessionId}`);
       (aiResponseData as any).client_message = sendMessageDto.message;
@@ -118,6 +156,7 @@ export class AiService {
       this.logger.error(`[AI] Failed to attach metadata for sessionId=${sessionId}`);
     }
 
+    // 8. Save the message exchange (client request & AI response) to the database
     const message = await this.prisma.aiMessage.create({
       data: {
         sessionId: session.sessionId,
@@ -135,12 +174,14 @@ export class AiService {
 
     this.logger.log(`[AI] Stored AI message messageId=${message.id} for sessionId=${sessionId}`);
 
+    // 9. Append database message ID back to the return response for tracking
     try {
       (aiResponseData as any).message_id = message.id;
     } catch {
       this.logger.warn(`[AI] Could not attach message_id to response for sessionId=${sessionId}`);
     }
 
+    // 10. Asynchronously send a push notification to inform user of the AI response
     const aiText: string = aiResponseData?.ai_message ?? '';
     const notificationBody = aiText.length > 0
       ? aiText.substring(0, 150) + (aiText.length > 150 ? '...' : '')
@@ -164,10 +205,17 @@ export class AiService {
     return aiResponseData;
   }
 
-
-  // get all sessions 
+  /**
+   * Retrieves a list of all AI sessions for a specific user, sorted by creation date (newest first).
+   * Maps each session to include summary details like the first message, last response, and message count.
+   * 
+   * @param userId - The unique identifier of the user.
+   * @returns A list of session summary objects.
+   */
   async getAllSessions(userId: number) {
     this.logger.log(`[AI] Fetching all sessions for userId=${userId}`);
+    
+    // Query sessions and pre-fetch the messages ordered chronologically
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
       select: {
@@ -186,6 +234,7 @@ export class AiService {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Map database models to client-friendly summary payloads
     return sessions.map((session) => ({
       session_id: session.sessionId,
       created_at: session.createdAt,
@@ -202,10 +251,18 @@ export class AiService {
     }));
   }
 
-
-  // 
+  /**
+   * Aggregates suggestions, extracted locations, and budgets across all AI sessions for a user.
+   * Walks through the message history chronologically to get the latest non-null parameters.
+   * 
+   * @param userId - The ID of the user requesting suggestions.
+   * @returns A list of sessions with their latest aggregated location and budget parameters.
+   * @throws NotFoundException if no sessions exist for the user.
+   */
   async getAllSessionSuggestionsForUser(userId: number) {
     this.logger.log(`[AI] Fetching all suggestions for userId=${userId}`);
+    
+    // Load sessions including their associated message list (chronological order)
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
       include: {
@@ -224,6 +281,7 @@ export class AiService {
       throw new NotFoundException('No sessions found for the user');
     }
 
+    // Process each session to extract the latest location and budget parameters
     return sessions.map((session) => {
       let location: string | null = null;
       let budget: string | null = null;
@@ -243,21 +301,21 @@ export class AiService {
         updated_at: session.updatedAt,
       };
     });
-
-
-
-
-
   }
 
-
-
-
   /**
-   * Get a specific session with all its messages
+   * Retrieves a specific session with all its messages in chronological order,
+   * parsing and shaping the extracted metadata (like location, trip details, and budget).
+   * 
+   * @param userId - The owner of the session.
+   * @param sessionId - The UUID of the session to fetch.
+   * @returns An array of message details formatted for client consumption.
+   * @throws NotFoundException if the session does not exist.
    */
   async getSessionAllMessagesById(userId: number, sessionId: string) {
     this.logger.log(`[AI] Fetching messages for sessionId=${sessionId} userId=${userId}`);
+    
+    // Find the session and load all associated messages chronologically
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -277,6 +335,7 @@ export class AiService {
 
     this.logger.log(`[AI] Found ${session.messages.length} message(s) for sessionId=${sessionId}`);
 
+    // Map each message to the formatted structure expected by the client/frontend
     return session.messages.map((message) => {
       const extractedData = message.extractedData as any || {};
       return {
@@ -309,10 +368,17 @@ export class AiService {
   }
 
   /**
-   * Delete a session
+   * Deletes a session for a given user. Cascade deleting of messages is handled via database relations.
+   * 
+   * @param userId - The user ID who owns the session.
+   * @param sessionId - The session ID to be deleted.
+   * @returns A confirmation message and the deleted sessionId.
+   * @throws NotFoundException if the session does not exist for the user.
    */
   async deleteSession(userId: number, sessionId: string) {
     this.logger.log(`[AI] Deleting session sessionId=${sessionId} userId=${userId}`);
+    
+    // Confirm the session exists and belongs to the user before deleting
     const session = await this.prisma.aiSession.findFirst({
       where: {
         sessionId,
@@ -325,6 +391,7 @@ export class AiService {
       throw new NotFoundException('Session not found');
     }
 
+    // Delete session (related messages are handled automatically via cascading config or database constraints)
     await this.prisma.aiSession.delete({
       where: { sessionId },
     });
@@ -333,3 +400,4 @@ export class AiService {
     return { message: 'Session deleted successfully', sessionId };
   }
 }
+
