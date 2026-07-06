@@ -68,3 +68,8 @@ enum NotificationType {
   SUBSCRIPTION
   ALERT
 }
+
+enum DevicePlatform {
+  WEB
+  MOBILE
+}

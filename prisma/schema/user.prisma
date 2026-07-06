@@ -13,8 +13,9 @@ model User {
   role             UserRoles @default(CLIENT)
   profilePicture   String?
   stripeCustomerId String?
-  isBolocked       Boolean   @default(false)
-  isDeleted        Boolean   @default(false)
+  isBolocked                 Boolean   @default(false)
+  isDeleted                  Boolean   @default(false)
+  pushNotificationsEnabled   Boolean   @default(true)
 
   forgotPasswordOtp          String?
   forgotPasswordOtpExpiresAt DateTime?

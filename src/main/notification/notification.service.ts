@@ -2,7 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { FirebaseService } from 'src/config/firebase/firebase.service';
 import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
-import { NotificationType } from '@prisma/client';
+import { DevicePlatform, NotificationType } from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
@@ -14,19 +14,22 @@ export class NotificationService {
   ) { }
 
   /**
-   * Register or update a user's FCM token
+   * Register or update a user's FCM token.
+   * platform defaults to MOBILE if not provided.
    */
   async registerToken(userId: number, dto: RegisterFcmTokenDto) {
+    const platform = dto.platform ?? DevicePlatform.MOBILE;
+
     const existing = await this.prisma.userFcmToken.findUnique({
       where: { token: dto.token },
     });
 
     if (existing) {
-      // If token belongs to a different user, reassign it
-      if (existing.userId !== userId) {
+      // Reassign if token belongs to a different user, or update platform
+      if (existing.userId !== userId || existing.platform !== platform) {
         await this.prisma.userFcmToken.update({
           where: { token: dto.token },
-          data: { userId, device: dto.device },
+          data: { userId, device: dto.device, platform },
         });
       }
       return { message: 'FCM token registered successfully' };
@@ -37,6 +40,7 @@ export class NotificationService {
         userId,
         token: dto.token,
         device: dto.device,
+        platform,
       },
     });
 
@@ -54,7 +58,15 @@ export class NotificationService {
   }
 
   /**
-   * Send push notification to a specific user (all their devices)
+   * Send push notification to a specific user (all their devices).
+   *
+   * - Mobile tokens → full notification + data payload (FCM shows it natively)
+   * - Web tokens    → data-only payload (NO notification field).
+   *   This prevents double notifications: the browser service worker won't
+   *   auto-show a push, and the frontend JS onMessage handler shows it once.
+   *
+   * If the user has disabled push notifications, FCM is skipped entirely
+   * but the notification is still saved to DB.
    */
   async sendToUser(
     userId: number,
@@ -63,15 +75,26 @@ export class NotificationService {
     type: NotificationType = NotificationType.GENERAL,
     data?: Record<string, string>,
   ): Promise<void> {
-    // Save notification to DB
+    // Save notification to DB regardless of push preference
     await this.prisma.notification.create({
       data: { userId, title, body, type, data: data ?? {} },
     });
 
-    // Get all FCM tokens for user
+    // Check if user has push notifications enabled
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pushNotificationsEnabled: true },
+    });
+
+    if (!user?.pushNotificationsEnabled) {
+      this.logger.log(`Push notifications disabled for user ${userId}. Skipping FCM send.`);
+      return;
+    }
+
+    // Get all FCM tokens with platform info
     const tokens = await this.prisma.userFcmToken.findMany({
       where: { userId },
-      select: { token: true },
+      select: { token: true, platform: true },
     });
 
     if (!tokens.length) {
@@ -79,27 +102,88 @@ export class NotificationService {
       return;
     }
 
-    const tokenList = tokens.map((t) => t.token);
+    // Separate mobile and web tokens
+    const mobileTokens = tokens
+      .filter((t) => t.platform === DevicePlatform.MOBILE)
+      .map((t) => t.token);
 
-    const response = await this.firebase.sendToMultipleTokens(tokenList, title, body, data);
+    const webTokens = tokens
+      .filter((t) => t.platform === DevicePlatform.WEB)
+      .map((t) => t.token);
 
-    // Clean up invalid tokens
-    if (response) {
-      const invalidTokens: string[] = [];
-      response.responses.forEach((res, idx) => {
-        if (!res.success && res.error?.code === 'messaging/registration-token-not-registered') {
-          invalidTokens.push(tokenList[idx]);
-        }
-      });
+    const invalidTokens: string[] = [];
 
-      if (invalidTokens.length > 0) {
-        await this.prisma.userFcmToken.deleteMany({
-          where: { token: { in: invalidTokens } },
+    // 1) Mobile: full notification + data (FCM handles display)
+    if (mobileTokens.length > 0) {
+      const mobileRes = await this.firebase.sendToMultipleTokens(
+        mobileTokens, title, body, data,
+      );
+      if (mobileRes) {
+        mobileRes.responses.forEach((res, idx) => {
+          if (!res.success && res.error?.code === 'messaging/registration-token-not-registered') {
+            invalidTokens.push(mobileTokens[idx]);
+          }
         });
-        this.logger.log(`Removed ${invalidTokens.length} invalid FCM tokens for user ${userId}`);
+        this.logger.log(
+          `Mobile FCM sent: ${mobileRes.successCount} success, ${mobileRes.failureCount} failures`,
+        );
       }
     }
+
+    // 2) Web: data-only (no notification payload) — prevents double notifications.
+    //    The frontend onMessage handler is responsible for showing the notification.
+    if (webTokens.length > 0) {
+      const webRes = await this.firebase.sendDataOnlyToMultipleTokens(
+        webTokens,
+        { title, body, type, ...(data ?? {}) },
+      );
+      if (webRes) {
+        webRes.responses.forEach((res, idx) => {
+          if (!res.success && res.error?.code === 'messaging/registration-token-not-registered') {
+            invalidTokens.push(webTokens[idx]);
+          }
+        });
+        this.logger.log(
+          `Web FCM sent: ${webRes.successCount} success, ${webRes.failureCount} failures`,
+        );
+      }
+    }
+
+    // Clean up invalid tokens
+    if (invalidTokens.length > 0) {
+      await this.prisma.userFcmToken.deleteMany({
+        where: { token: { in: invalidTokens } },
+      });
+      this.logger.log(`Removed ${invalidTokens.length} invalid FCM tokens for user ${userId}`);
+    }
   }
+
+  /**
+   * Toggle push notification preference for a user.
+   * Automatically flips the current state: ON → OFF, OFF → ON.
+   */
+  async togglePushNotifications(userId: number) {
+    // Read current state
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pushNotificationsEnabled: true },
+    });
+
+    const currentState = user?.pushNotificationsEnabled ?? true;
+    const newState = !currentState;
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushNotificationsEnabled: newState },
+    });
+
+    return {
+      message: `Push notifications ${newState ? 'enabled' : 'disabled'} successfully`,
+      pushNotificationsEnabled: newState,
+    };
+  }
+
+
 
   /**
    * Get all notifications for a user

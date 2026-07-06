@@ -53,6 +53,20 @@ export class NotificationController {
     return await this.notificationService.removeToken(req.user.sub, token);
   }
 
+
+
+  /**
+   * Toggle push notifications — auto-flips: ON→OFF, OFF→ON (no body needed)
+   */
+  @Patch('push-settings/toggle')
+  @Roles(UserRoles.CLIENT)
+  @ApiOperation({
+    summary: 'Toggle push notifications on/off (auto-flips current state, no body needed)',
+  })
+  async togglePushNotifications(@Req() req) {
+    return await this.notificationService.togglePushNotifications(req.user.sub);
+  }
+
   /**
    * Get my notifications (paginated)
    */

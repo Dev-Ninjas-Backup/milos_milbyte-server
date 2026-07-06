@@ -126,4 +126,42 @@ export class FirebaseService implements OnModuleInit {
       return null;
     }
   }
+
+  /**
+   * Send a DATA-ONLY FCM message to multiple web tokens (no notification payload).
+   *
+   * Why? Web browsers receive FCM in two ways:
+   *   1. Service Worker (background) — auto-shows a push if `notification` field is present
+   *   2. JS onMessage handler (foreground) — the app handles display itself
+   *
+   * Sending only `data` (no `notification`) means the service worker does NOT
+   * auto-display a notification, so the frontend JS shows it exactly ONCE.
+   */
+  async sendDataOnlyToMultipleTokens(
+    tokens: string[],
+    data: Record<string, string>,
+  ): Promise<BatchResponse | null> {
+    if (!tokens.length) return null;
+
+    try {
+      const message: MulticastMessage = {
+        data,          // only data — no notification field
+        tokens,
+        webpush: {
+          headers: { Urgency: 'high' },
+        },
+      };
+
+      const response = await this.messaging.sendEachForMulticast(message);
+      this.logger.log(
+        `Web data-only multicast: ${response.successCount} success, ${response.failureCount} failures`,
+      );
+      return response;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send web data-only notification: ${error.message}`,
+      );
+      return null;
+    }
+  }
 }
