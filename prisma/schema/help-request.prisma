@@ -1,12 +1,12 @@
 model HelpRequest {
-  id          Int               @id @default(autoincrement())
-  name        String
-  email       String
-  subject     String
-  message     String            @db.Text
-  status      HelpRequestStatus @default(OPEN)
-  adminReply  String?           @db.Text
-  resolvedAt  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id         Int               @id @default(autoincrement())
+  name       String
+  email      String
+  subject    String
+  message    String            @db.Text
+  status     HelpRequestStatus @default(OPEN)
+  adminReply String?           @db.Text
+  resolvedAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }

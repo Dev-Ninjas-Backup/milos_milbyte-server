@@ -1,21 +1,21 @@
 model User {
-  id               Int       @id @default(autoincrement())
-  email            String    @unique
-  firstName        String?
-  lastName         String?
-  phoneNumber      String?
-  adress           String?
-  city             String?
-  state            String?
-  zipCode          String?
-  country          String?
-  password         String
-  role             UserRoles @default(CLIENT)
-  profilePicture   String?
-  stripeCustomerId String?
-  isBolocked                 Boolean   @default(false)
-  isDeleted                  Boolean   @default(false)
-  pushNotificationsEnabled   Boolean   @default(true)
+  id                       Int       @id @default(autoincrement())
+  email                    String    @unique
+  firstName                String?
+  lastName                 String?
+  phoneNumber              String?
+  adress                   String?
+  city                     String?
+  state                    String?
+  zipCode                  String?
+  country                  String?
+  password                 String
+  role                     UserRoles @default(CLIENT)
+  profilePicture           String?
+  stripeCustomerId         String?
+  isBolocked               Boolean   @default(false)
+  isDeleted                Boolean   @default(false)
+  pushNotificationsEnabled Boolean   @default(true)
 
   forgotPasswordOtp          String?
   forgotPasswordOtpExpiresAt DateTime?

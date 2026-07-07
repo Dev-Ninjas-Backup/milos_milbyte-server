@@ -1,0 +1,10 @@
+model HotelBooking {
+  id              String   @id @default(uuid())
+  duffelBookingId String   @unique
+  guestName       String
+  guestEmail      String
+  totalAmount     String
+  currency        String
+  status          String   @default("CONFIRMED")
+  createdAt       DateTime @default(now())
+}

@@ -54,6 +54,10 @@ export class NotificationService {
     await this.prisma.userFcmToken.deleteMany({
       where: { userId, token },
     });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushNotificationsEnabled: false },
+    });
     return { message: 'FCM token removed successfully' };
   }
 

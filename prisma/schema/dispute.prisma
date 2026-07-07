@@ -1,14 +1,14 @@
 model Dispute {
-  id          Int           @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   userId      Int
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   category    DisputeCategory
-  description String        @db.Text
-  status      DisputeStatus @default(OPEN)
+  description String          @db.Text
+  status      DisputeStatus   @default(OPEN)
   priority    DisputePriority @default(MEDIUM)
-  adminReply  String?       @db.Text
+  adminReply  String?         @db.Text
   resolvedAt  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }

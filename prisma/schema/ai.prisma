@@ -1,26 +1,26 @@
 model AiSession {
-  id          String      @id @default(cuid())
-  userId      Int
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sessionId   String      @unique
+  sessionId String @unique
 
-  messages    AiMessage[]
+  messages AiMessage[]
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AiMessage {
-  id                     String      @id @default(cuid())
+  id String @id @default(cuid())
 
-  sessionId              String
-  session                AiSession   @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  sessionId String
+  session   AiSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
 
-  description            String?
+  description String?
 
   // Conversation state
-  currentStep            String
+  currentStep String
 
   // Extracted parameters
   // location               String?
@@ -31,26 +31,26 @@ model AiMessage {
   // experience             String?
   // citizenship            String?
   // passengers             Json?
-  passengerPreferences   String?
-  parameters_extracted   Json?
+  passengerPreferences String?
+  parameters_extracted Json?
 
   // Trip details
-  tripCard               Json?
-  tripGuide              Json?
+  tripCard  Json?
+  tripGuide Json?
 
   // Status
-  submitted              Boolean     @default(false)
-  checkoutRequired       Boolean     @default(false)
+  submitted        Boolean @default(false)
+  checkoutRequired Boolean @default(false)
 
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Message content
-  clientMessage          String
-  aiMessage              String
+  clientMessage String
+  aiMessage     String
 
   // Extracted data
-  extractedData          Json?
+  extractedData Json?
 
   @@index([sessionId])
 }

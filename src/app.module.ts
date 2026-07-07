@@ -15,6 +15,7 @@ import { HelpRequestModule } from './main/help-request/help-request.module';
 import { DisputeModule } from './main/dispute/dispute.module';
 
 import { FlightModule } from './main/flight/flight.module';
+import { HotelModule } from './main/hotel/hotel.module';
 import { NotificationModule } from './main/notification/notification.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { NotificationModule } from './main/notification/notification.module';
     AiModule,
     DisputeModule,
     FlightModule,
+    HotelModule,
     NotificationModule,
   ],
   controllers: [AppController],
