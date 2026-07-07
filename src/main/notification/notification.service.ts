@@ -44,6 +44,11 @@ export class NotificationService {
       },
     });
 
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushNotificationsEnabled: true },
+    });
+
     return { message: 'FCM token registered successfully' };
   }
 

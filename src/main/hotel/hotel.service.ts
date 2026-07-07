@@ -5,7 +5,7 @@ import {
   Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Duffel } from '@duffel/api';
+import { Duffel, DuffelError } from '@duffel/api';
 import {
   StaysSearchResponse,
   StaysSearchResult,
@@ -30,16 +30,7 @@ export class HotelService {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Private helper: parse & re-throw Duffel SDK errors as clean
-  // NestJS HttpExceptions with field-level detail included.
-  // ─────────────────────────────────────────────────────────────
 
-  // ─────────────────────────────────────────────────────────────
-  // GET /hotels/search
-  // Calls duffel.stays.search to find accommodations near a location.
-  // Uses location-based search with geographic coordinates + radius.
-  // ─────────────────────────────────────────────────────────────
   async searchHotels(dto: SearchHotelsDto) {
     try {
       this.logger.log(
@@ -83,14 +74,7 @@ export class HotelService {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // GET /hotels/rates
-  // Fetches all rates for a specific search result by its ID.
-  // NOTE: The Duffel SDK's fetchAllRates takes only the searchResultId
-  // (the id on StaysSearchResult, not the accommodationId separately).
-  // accommodationId is retained in the DTO for client convenience and
-  // is echoed back in the response.
-  // ─────────────────────────────────────────────────────────────
+
   async getRates(dto: GetRatesDto) {
     try {
       this.logger.log(
@@ -130,16 +114,13 @@ export class HotelService {
         rates: allRates,
       };
     } catch (error) {
+      console.log('Error in fetching hotel rates', error);
       if (error instanceof HttpException) throw error;
       this.handleDuffelError(error, 'Fetching hotel rates failed');
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // POST /hotels/quote
-  // Creates a Duffel stays quote from a rate ID (locks in pricing).
-  // quotes.create accepts a rateId string directly.
-  // ─────────────────────────────────────────────────────────────
+
   async createQuote(dto: CreateQuoteDto) {
     try {
       this.logger.log(`Creating quote for rateId=${dto.rateId}`);
@@ -248,42 +229,59 @@ export class HotelService {
     }
   }
   private handleDuffelError(error: any, fallbackMessage: string): never {
-    // Always log the full raw error so we can see what the SDK actually threw
-    this.logger.debug(
-      `Raw Duffel error: ${JSON.stringify({ errors: error })}`,
-    );
+    // ── Case 1: Proper DuffelError with a structured errors[] array ──────────
+    // The SDK throws DuffelError when response is not ok OR has an errors field.
+    // When the API returns a non-JSON body (e.g. a plain-text 403 from Cloudflare/Duffel),
+    // the constructor receives { meta: undefined, errors: undefined, headers: actualHeaders }.
+    // We must handle both sub-cases.
+    if (error instanceof DuffelError) {
+      const errorsArray: Array<{ message: string; code?: string; type?: string }> =
+        Array.isArray(error.errors) ? error.errors : [];
 
-    const duffelErrors: Array<{ message: string; code?: string; type?: string }> =
-      error?.errors ?? [];
+      if (errorsArray.length > 0) {
+        // Standard structured API error (e.g. 422 validation, 401 auth)
+        const status: number = error.meta?.status ?? HttpStatus.BAD_GATEWAY;
 
-    if (duffelErrors.length) {
-      const status: number = error?.meta?.status ?? HttpStatus.BAD_GATEWAY;
+        const details = errorsArray.map((e) => ({
+          message: e.message,
+          code: e.code ?? null,
+          type: e.type ?? null,
+        }));
 
-      const details = duffelErrors.map((e) => ({
-        message: e.message,
-        code: e.code ?? null,
-        type: e.type ?? null,
-      }));
+        const userMessage =
+          details.length === 1
+            ? details[0].message
+            : `${details.length} errors: ${details.map((d) => d.message).join(' | ')}`;
 
-      const userMessage =
-        details.length === 1
-          ? details[0].message
-          : `${details.length} errors: ${details.map((d) => d.message).join(' | ')}`;
+        this.logger.warn(`Duffel API error (${status}): ${JSON.stringify(details)}`);
 
-      this.logger.warn(`Duffel error (${status}): ${JSON.stringify(details)}`);
+        throw new HttpException(
+          { statusCode: status, error: 'Duffel API Error', message: userMessage },
+          status,
+        );
+      }
+
+      // DuffelError but no errors[] — API returned a plain-text or unexpected body.
+      // Most likely: 403 "This feature is not enabled for your account."
+      const requestId = error.headers?.get?.('x-request-id') ?? 'unknown';
+      const metaStatus: number = error.meta?.status ?? HttpStatus.FORBIDDEN;
+
+      const plainMessage =
+        metaStatus === HttpStatus.FORBIDDEN
+          ? 'Duffel Stays is not enabled for this account. Contact Duffel at https://duffel.com/contact-us'
+          : `Duffel API returned an unexpected response (status ${metaStatus})`;
+
+      this.logger.warn(
+        `Duffel non-JSON error (${metaStatus}), requestId=${requestId}: ${plainMessage}`,
+      );
 
       throw new HttpException(
-        {
-          statusCode: status,
-          error: 'Duffel API Error',
-          message: userMessage,
-        },
-        status,
+        { statusCode: metaStatus, error: 'Duffel API Error', message: plainMessage },
+        metaStatus,
       );
     }
 
-    // Non-Duffel or network error — error.message may be empty string on DuffelError
-    // so fall back to the context-specific message if it is blank.
+    // ── Case 2: Network / unknown error ──────────────────────────────────────
     const rawMessage: string = error?.message ?? '';
     const message = rawMessage.trim() || fallbackMessage;
     this.logger.error(`${fallbackMessage}: ${message}`, error?.stack);
