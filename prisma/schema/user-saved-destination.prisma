@@ -1,0 +1,10 @@
+model UserSavedDestination {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  destinationId Int
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([userId, destinationId])
+}

@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { CreateDestinationDto } from './dto/create-destination.dto';
 import { DestinationQueryDto } from './dto/destination-query.dto';
+import { SaveDestinationDto } from './dto/save-destination.dto';
 import { UpdateDestinationDto } from './dto/update-destination.dto';
 
 @Injectable()
@@ -127,6 +128,52 @@ export class DestinationService {
 
     return {
       message: 'Destination deleted successfully',
+    };
+  }
+
+  async saveDestination(userId: number, dto: SaveDestinationDto) {
+    const destination = await this.prisma.destination.findUnique({
+      where: { id: dto.destinationId },
+    });
+
+    if (!destination) {
+      throw new NotFoundException('Destination not found');
+    }
+
+    const existing = await this.prisma.userSavedDestination.findUnique({
+      where: {
+        userId_destinationId: {
+          userId,
+          destinationId: dto.destinationId,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('Destination already saved');
+    }
+
+    const saved = await this.prisma.userSavedDestination.create({
+      data: { userId, destinationId: dto.destinationId },
+      include: { destination: true },
+    });
+
+    return {
+      message: 'Destination saved successfully',
+      savedDestination: saved,
+    };
+  }
+
+  async getSavedDestinations(userId: number) {
+    const savedDestinations = await this.prisma.userSavedDestination.findMany({
+      where: { userId },
+      include: { destination: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      message: 'Saved destinations fetched successfully',
+      savedDestinations,
     };
   }
 }

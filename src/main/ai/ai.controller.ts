@@ -7,10 +7,12 @@ import {
   Get,
   Param,
   Delete,
+  Patch,
 } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { CreateAiDto } from './dto/create-ai.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
 import { UserRoles } from '@prisma/client';
 import { Roles } from 'src/main/auth/decorators/roles.decorator';
 import { AuthGuard } from 'src/main/auth/guards/auth.guard';
@@ -106,5 +108,54 @@ export class AiController {
   @ApiOperation({ summary: 'Get all session suggestions for the user' })
   async getAllSessionsSuggestion(@Req() req) {
     return await this.aiService.getAllSessionSuggestionsForUser(req.user.sub);
+  }
+
+  /**
+   * Edit a specific message in a session
+   */
+  @Patch('sessions/:sessionId/message/:messageId')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRoles.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Edit a user message in a session',
+    description:
+      'Updates the clientMessage text, re-sends it to the AI engine, ' +
+      'and stores the new AI response. The original message is preserved in `original_message` field. ' +
+      '`is_edited: true` and `edited_at` are set on the record.',
+  })
+  @ApiParam({ name: 'sessionId', description: 'The session ID' })
+  @ApiParam({ name: 'messageId', description: 'The message ID to edit (returned as message_id)' })
+  async editMessage(
+    @Param('sessionId') sessionId: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: UpdateMessageDto,
+    @Req() req,
+  ) {
+    return await this.aiService.editMessage(
+      req.user.sub,
+      sessionId,
+      messageId,
+      dto,
+    );
+  }
+
+  /**
+   * Get initial message of the most recently updated session
+   */
+  @Get('sessions/last-updated/initial-message')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRoles.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get the initial message of the most recently updated session',
+    description:
+      'Finds the session that was last modified (by message edit or new message) ' +
+      'and returns only its very first (initial) client message along with session metadata.',
+  })
+  async getLastUpdatedSessionInitialMessage(@Req() req) {
+    return await this.aiService.getLastUpdatedSessionInitialMessage(
+      req.user.sub,
+    );
   }
 }

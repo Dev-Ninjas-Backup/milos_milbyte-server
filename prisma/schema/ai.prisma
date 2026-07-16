@@ -46,8 +46,13 @@ model AiMessage {
   updatedAt DateTime @updatedAt
 
   // Message content
-  clientMessage String
-  aiMessage     String
+  clientMessage    String
+  aiMessage        String
+
+  // Edit tracking
+  isEdited         Boolean   @default(false)
+  editedAt         DateTime?
+  originalMessage  String?   // preserves the original clientMessage before edit
 
   // Extracted data
   extractedData Json?

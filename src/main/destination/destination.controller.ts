@@ -9,7 +9,9 @@ import {
   Delete,
   ParseIntPipe,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRoles } from '@prisma/client';
 import { Roles } from 'src/main/auth/decorators/roles.decorator';
@@ -18,7 +20,16 @@ import { RolesGuard } from 'src/main/auth/guards/roles.guard';
 import { DestinationService } from './destination.service';
 import { CreateDestinationDto } from './dto/create-destination.dto';
 import { DestinationQueryDto } from './dto/destination-query.dto';
+import { SaveDestinationDto } from './dto/save-destination.dto';
 import { UpdateDestinationDto } from './dto/update-destination.dto';
+
+type AuthenticatedRequest = Request & {
+  user: {
+    sub: number;
+    email: string;
+    role: UserRoles;
+  };
+};
 
 @ApiTags('Destinations')
 @Controller('destination')
@@ -70,5 +81,31 @@ export class DestinationController {
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return await this.destinationService.remove(id);
+  }
+
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save a destination to user wishlist' })
+  @Post('saved')
+  async saveDestination(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: SaveDestinationDto,
+  ) {
+    return await this.destinationService.saveDestination(
+      Number(req.user.sub),
+      dto,
+    );
+  }
+
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all saved destinations of logged-in user' })
+  @Get('saved')
+  async getSavedDestinations(@Req() req: AuthenticatedRequest) {
+    return await this.destinationService.getSavedDestinations(
+      Number(req.user.sub),
+    );
   }
 }

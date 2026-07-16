@@ -17,6 +17,7 @@ import { DisputeModule } from './main/dispute/dispute.module';
 import { FlightModule } from './main/flight/flight.module';
 import { HotelModule } from './main/hotel/hotel.module';
 import { NotificationModule } from './main/notification/notification.module';
+import { WeatherModule } from './main/weather/weather.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { NotificationModule } from './main/notification/notification.module';
     FlightModule,
     HotelModule,
     NotificationModule,
+    WeatherModule,
   ],
   controllers: [AppController],
   providers: [AppService],

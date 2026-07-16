@@ -6,6 +6,7 @@ model Destination {
   isPopular     Boolean  @default(false)
   perPersonCost Float
   image         String
+  savedByUsers  UserSavedDestination[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
