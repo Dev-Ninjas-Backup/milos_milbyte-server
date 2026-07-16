@@ -29,9 +29,7 @@ import {
 export class AiController {
   constructor(private readonly aiService: AiService) { }
 
-  /**
-   * Create AI response (legacy - creates a new session and sends message)
-   */
+
   @Post('generate-ai-response-new-session')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRoles.CLIENT)
@@ -41,9 +39,6 @@ export class AiController {
     return await this.aiService.createAIResponse(createAiDto, req.user.sub);
   }
 
-  /**
-   * Send a message to a specific session
-   */
   @Post('sessions/:sessionId/message')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRoles.CLIENT)
@@ -71,9 +66,7 @@ export class AiController {
     return await this.aiService.getAllSessions(req.user.sub);
   }
 
-  /**
-   * Get a specific session with all its messages
-   */
+
   @Get('sessions/:sessionId')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRoles.CLIENT)
@@ -87,9 +80,7 @@ export class AiController {
     );
   }
 
-  /**
-   * Delete a session
-   */
+
   @Delete('sessions/:sessionId')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRoles.CLIENT)
@@ -110,9 +101,7 @@ export class AiController {
     return await this.aiService.getAllSessionSuggestionsForUser(req.user.sub);
   }
 
-  /**
-   * Edit a specific message in a session
-   */
+
   @Patch('sessions/:sessionId/message/:messageId')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRoles.CLIENT)
