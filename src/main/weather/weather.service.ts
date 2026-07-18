@@ -7,8 +7,8 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { WeatherQueryDto } from './dto/weather-query.dto';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import * as countries from 'i18n-iso-countries';
+
 
 @Injectable()
 export class WeatherService {
