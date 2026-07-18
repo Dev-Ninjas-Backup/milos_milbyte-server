@@ -7,8 +7,8 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { WeatherQueryDto } from './dto/weather-query.dto';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import * as countries from 'i18n-iso-countries';
-import * as enLocale from 'i18n-iso-countries/langs/en.json';
 
 @Injectable()
 export class WeatherService {
@@ -17,7 +17,8 @@ export class WeatherService {
   private readonly wttrBaseUrl = 'https://wttr.in';
 
   constructor(private readonly http: HttpService) {
-    countries.registerLocale(enLocale);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    countries.registerLocale(require('i18n-iso-countries/langs/en.json'));
   }
 
   private getCountryName(code: string): string {
@@ -200,7 +201,6 @@ export class WeatherService {
       this.http.get(`${this.owmBaseUrl}/weather`, { params }),
     );
     const d = response.data;
-    console.log(d)
     return {
       message: 'Weather fetched successfully',
       source: 'openweathermap',
@@ -227,7 +227,7 @@ export class WeatherService {
   }
 
   private async getCurrentWeatherFromWttr(query: WeatherQueryDto) {
-
+    const location = `${query.lat},${query.lon}`;
 
     try {
       const response = await firstValueFrom(
