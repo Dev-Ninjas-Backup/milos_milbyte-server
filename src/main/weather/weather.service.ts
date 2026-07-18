@@ -103,6 +103,22 @@ export class WeatherService {
       );
     }
 
+    // ── Validate coordinate ranges ──────────────────────────────────────────────
+    const lat = Number(query.lat);
+    const lon = Number(query.lon);
+
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      throw new BadRequestException(
+        `Invalid latitude "${query.lat}". Latitude must be a number between -90 and 90.`,
+      );
+    }
+
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+      throw new BadRequestException(
+        `Invalid longitude "${query.lon}". Longitude must be a number between -180 and 180.`,
+      );
+    }
+
     const owmKey = process.env.OPENWEATHER_API_KEY;
 
     // ── Try OpenWeatherMap ──────────────────────────────────────────────────────
