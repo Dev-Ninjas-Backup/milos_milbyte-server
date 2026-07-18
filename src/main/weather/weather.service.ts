@@ -83,7 +83,6 @@ export class WeatherService {
       this.http.get(`${this.owmBaseUrl}/weather`, { params }),
     );
     const d = response.data;
-
     // Resolve accurate city name using OWM reverse geocoding API to avoid hyper-local neighborhood names
     let city = d.name;
     try {
