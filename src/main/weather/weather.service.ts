@@ -98,7 +98,10 @@ export class WeatherService {
    * Try OpenWeatherMap first, fallback to wttr.in if OWM key is invalid/missing.
    */
   async getCurrentWeather(query: WeatherQueryDto) {
+    this.logger.log(`[Weather] getCurrentWeather called → lat=${query.lat}, lon=${query.lon}`);
+
     if (!query.lat || !query.lon) {
+      this.logger.warn('[Weather] Missing lat or lon in request');
       throw new BadRequestException(
         'Provide both "lat" and "lon"',
       );
@@ -109,39 +112,50 @@ export class WeatherService {
     const lon = Number(query.lon);
 
     if (isNaN(lat) || lat < -90 || lat > 90) {
+      this.logger.warn(`[Weather] Invalid latitude: ${query.lat}`);
       throw new BadRequestException(
         `Invalid latitude "${query.lat}". Latitude must be a number between -90 and 90.`,
       );
     }
 
     if (isNaN(lon) || lon < -180 || lon > 180) {
+      this.logger.warn(`[Weather] Invalid longitude: ${query.lon}`);
       throw new BadRequestException(
         `Invalid longitude "${query.lon}". Longitude must be a number between -180 and 180.`,
       );
     }
 
+    this.logger.debug(`[Weather] Coordinate range valid → lat=${lat}, lon=${lon}`);
+
     // ── Validate that coordinates map to a real location (not ocean/invalid) ────
+    this.logger.debug('[Weather] Starting Nominatim reverse geocoding validation...');
     await this.validateCoordinates(lat, lon);
 
     const owmKey = process.env.OPENWEATHER_API_KEY;
 
     // ── Try OpenWeatherMap ──────────────────────────────────────────────────────
     if (owmKey && owmKey !== 'your_openweathermap_api_key_here') {
+      this.logger.debug('[Weather] OWM API key found → attempting OpenWeatherMap');
       try {
-        return await this.getCurrentWeatherFromOWM(query, owmKey);
+        const result = await this.getCurrentWeatherFromOWM(query, owmKey);
+        this.logger.log(`[Weather] Weather fetched successfully via OpenWeatherMap for lat=${lat}, lon=${lon}`);
+        return result;
       } catch (err) {
         // Key not yet activated or network error → fall through to wttr.in
         if (err?.response?.status === 401) {
           this.logger.warn(
-            'OWM key returned 401 (not yet active). Falling back to wttr.in',
+            '[Weather] OWM key returned 401 (not yet active). Falling back to wttr.in',
           );
         } else {
-          this.logger.warn('OWM failed, falling back to wttr.in');
+          this.logger.warn(`[Weather] OWM request failed (status=${err?.response?.status ?? 'N/A'}). Falling back to wttr.in`);
         }
       }
+    } else {
+      this.logger.debug('[Weather] No valid OWM key configured → using wttr.in directly');
     }
 
     // ── Fallback: wttr.in (no key required) ────────────────────────────────────
+    this.logger.debug('[Weather] Fetching weather from wttr.in fallback...');
     return await this.getCurrentWeatherFromWttr(query);
   }
 
@@ -152,6 +166,8 @@ export class WeatherService {
    * if Nominatim cannot resolve it to any known place.
    */
   private async validateCoordinates(lat: number, lon: number): Promise<void> {
+    this.logger.debug(`[Weather] Nominatim → reverse geocoding lat=${lat}, lon=${lon}`);
+
     try {
       const response = await firstValueFrom(
         this.http.get('https://nominatim.openstreetmap.org/reverse', {
@@ -168,9 +184,11 @@ export class WeatherService {
       );
 
       const data = response.data;
+      this.logger.debug(`[Weather] Nominatim response type="${data?.type}" class="${data?.class}" addresstype="${data?.addresstype}"`);
 
       // Nominatim returns { error: '...' } when nothing is found
       if (data?.error) {
+        this.logger.warn(`[Weather] Nominatim returned error for lat=${lat}, lon=${lon}: ${data.error}`);
         throw new BadRequestException(
           `This location is not known to our Map`,
         );
@@ -182,17 +200,22 @@ export class WeatherService {
       const locationClass: string = (data?.class ?? '').toLowerCase();
 
       if (waterTypes.some(w => locationType.includes(w)) || locationClass === 'waterway') {
+        this.logger.warn(`[Weather] Coordinates (${lat}, ${lon}) resolved to water body → type=${locationType}, class=${locationClass}`);
         throw new BadRequestException(
           `This location is not known to our Map`,
         );
       }
+
+      this.logger.debug(`[Weather] Nominatim validation passed for lat=${lat}, lon=${lon}`);
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      this.logger.warn(`Nominatim reverse geocoding failed (skipping validation): ${err?.message}`);
+      this.logger.warn(`[Weather] Nominatim request failed (skipping validation): ${err?.message}`);
     }
   }
 
   private async getCurrentWeatherFromOWM(query: WeatherQueryDto, apiKey: string) {
+    this.logger.debug(`[Weather] OWM → fetching weather for lat=${query.lat}, lon=${query.lon}`);
+
     const params: Record<string, string> = { appid: apiKey, units: 'metric' };
     params.lat = query.lat!;
     params.lon = query.lon!;
@@ -201,6 +224,9 @@ export class WeatherService {
       this.http.get(`${this.owmBaseUrl}/weather`, { params }),
     );
     const d = response.data;
+
+    this.logger.log(`[Weather] OWM → data received: city=${d.name}, country=${d.sys.country}, temp=${d.main.temp}°C`);
+
     return {
       message: 'Weather fetched successfully',
       source: 'openweathermap',
@@ -228,6 +254,7 @@ export class WeatherService {
 
   private async getCurrentWeatherFromWttr(query: WeatherQueryDto) {
     const location = `${query.lat},${query.lon}`;
+    this.logger.debug(`[Weather] wttr.in → fetching weather for location="${location}"`);
 
     try {
       const response = await firstValueFrom(
@@ -238,14 +265,18 @@ export class WeatherService {
       const area = d.nearest_area?.[0];
       const code = cur.weatherCode;
 
+      const city = area?.region?.[0]?.value ?? area?.areaName?.[0]?.value ?? 'Unknown';
+      const country = area?.country?.[0]?.value ?? '';
+      this.logger.log(`[Weather] wttr.in → data received: city=${city}, country=${country}, temp=${cur.temp_C}°C, condition code=${code}`);
+
       return {
         message: 'Weather fetched successfully',
         source: 'wttr.in',
         weather: {
           // When lat/lon is used, areaName is a neighbourhood → use region (actual city).
           // When a city name is used, areaName is the searched city → prefer it.
-          city: area?.region?.[0]?.value ?? area?.areaName?.[0]?.value ?? 'Unknown',
-          country: area?.country?.[0]?.value ?? '',
+          city,
+          country,
           date: new Date().toISOString(),
           temperature: Number(cur.temp_C),
           feelsLike: Number(cur.FeelsLikeC),
@@ -267,9 +298,12 @@ export class WeatherService {
         },
       };
     } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       if (error?.response?.status === 404) {
-        throw new BadRequestException('City not found');
+        this.logger.warn(`[Weather] wttr.in → 404 for location="${location}"`);
+        throw new BadRequestException('Location not found');
       }
+      this.logger.error(`[Weather] wttr.in → request failed for location="${location}": ${error?.message}`);
       throw new InternalServerErrorException(
         'Failed to fetch weather data',
       );
