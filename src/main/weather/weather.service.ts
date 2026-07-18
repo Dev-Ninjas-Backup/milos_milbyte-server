@@ -29,7 +29,6 @@ export class WeatherService {
       );
     }
 
-    // ── Validate coordinate ranges ──────────────────────────────────────────────
     const lat = Number(query.lat);
     const lon = Number(query.lon);
 
@@ -83,7 +82,7 @@ export class WeatherService {
       this.http.get(`${this.owmBaseUrl}/weather`, { params }),
     );
     const d = response.data;
-    // Resolve accurate city name using OWM reverse geocoding API to avoid hyper-local neighborhood names
+
     let city = d.name;
     try {
       this.logger.debug(`[Weather] OWM Geocoding → resolving name for lat=${query.lat}, lon=${query.lon}`);
@@ -111,7 +110,7 @@ export class WeatherService {
       message: 'Weather fetched successfully',
       source: 'openweathermap',
       weather: {
-        city,
+        city: d.name,
         country: this.getCountryName(d.sys.country),
         date: new Date().toISOString(),
         temperature: Math.round(d.main.temp),
