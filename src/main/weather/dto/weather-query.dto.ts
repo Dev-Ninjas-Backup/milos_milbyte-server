@@ -2,14 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNumberString } from 'class-validator';
 
 export class WeatherQueryDto {
-  @ApiProperty({
-    description: 'City name or location string (e.g. "Dhaka", "New York")',
-    example: 'Dhaka',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  city?: string;
+
 
   @ApiProperty({
     description: 'Latitude coordinate',

@@ -7,6 +7,8 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { WeatherQueryDto } from './dto/weather-query.dto';
+import * as countries from 'i18n-iso-countries';
+import * as enLocale from 'i18n-iso-countries/langs/en.json';
 
 @Injectable()
 export class WeatherService {
@@ -14,7 +16,13 @@ export class WeatherService {
   private readonly owmBaseUrl = 'https://api.openweathermap.org/data/2.5';
   private readonly wttrBaseUrl = 'https://wttr.in';
 
-  constructor(private readonly http: HttpService) { }
+  constructor(private readonly http: HttpService) {
+    countries.registerLocale(enLocale);
+  }
+
+  private getCountryName(code: string): string {
+    return countries.getName(code?.toUpperCase(), 'en') ?? code ?? '';
+  }
 
   // ─── WeatherCode → human-readable condition map (wttr.in codes) ──────────────
   private readonly weatherCodeMap: Record<string, string> = {
@@ -89,9 +97,9 @@ export class WeatherService {
    * Try OpenWeatherMap first, fallback to wttr.in if OWM key is invalid/missing.
    */
   async getCurrentWeather(query: WeatherQueryDto) {
-    if (!query.city && (!query.lat || !query.lon)) {
+    if (!query.lat || !query.lon) {
       throw new BadRequestException(
-        'Provide either "city" or both "lat" and "lon"',
+        'Provide both "lat" and "lon"',
       );
     }
 
@@ -117,46 +125,23 @@ export class WeatherService {
     return await this.getCurrentWeatherFromWttr(query);
   }
 
-  /**
-   * 3-day forecast — same OWM → wttr.in fallback logic.
-   */
-  async getForecast(query: WeatherQueryDto) {
-    if (!query.city && (!query.lat || !query.lon)) {
-      throw new BadRequestException(
-        'Provide either "city" or both "lat" and "lon"',
-      );
-    }
-
-    const owmKey = process.env.OPENWEATHER_API_KEY;
-
-    if (owmKey && owmKey !== 'your_openweathermap_api_key_here') {
-      try {
-        return await this.getForecastFromOWM(query, owmKey);
-      } catch {
-        this.logger.warn('OWM forecast failed, falling back to wttr.in');
-      }
-    }
-
-    return await this.getForecastFromWttr(query);
-  }
-
 
   private async getCurrentWeatherFromOWM(query: WeatherQueryDto, apiKey: string) {
     const params: Record<string, string> = { appid: apiKey, units: 'metric' };
-    if (query.city) params.q = query.city;
-    else { params.lat = query.lat!; params.lon = query.lon!; }
+    params.lat = query.lat!;
+    params.lon = query.lon!;
 
     const response = await firstValueFrom(
       this.http.get(`${this.owmBaseUrl}/weather`, { params }),
     );
     const d = response.data;
-
+    console.log(d)
     return {
       message: 'Weather fetched successfully',
       source: 'openweathermap',
       weather: {
         city: d.name,
-        country: d.sys.country,
+        country: this.getCountryName(d.sys.country),
         date: new Date().toISOString(),
         temperature: Math.round(d.main.temp),
         feelsLike: Math.round(d.main.feels_like),
@@ -176,51 +161,8 @@ export class WeatherService {
     };
   }
 
-  private async getForecastFromOWM(query: WeatherQueryDto, apiKey: string) {
-    const params: Record<string, string> = { appid: apiKey, units: 'metric' };
-    if (query.city) params.q = query.city;
-    else { params.lat = query.lat!; params.lon = query.lon!; }
-
-    const response = await firstValueFrom(
-      this.http.get(`${this.owmBaseUrl}/forecast`, { params }),
-    );
-    const d = response.data;
-    const dailyMap: Record<string, any> = {};
-
-    for (const item of d.list) {
-      const date = item.dt_txt.split(' ')[0];
-      const hour = item.dt_txt.split(' ')[1];
-      if (!dailyMap[date] || hour === '12:00:00') {
-        dailyMap[date] = {
-          date,
-          temperature: Math.round(item.main.temp),
-          tempMin: Math.round(item.main.temp_min),
-          tempMax: Math.round(item.main.temp_max),
-          condition: item.weather[0].main,
-          description: item.weather[0].description,
-          icon: `https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`,
-          windSpeed: Math.round(item.wind.speed * 3.6),
-          humidity: item.main.humidity,
-          cloudiness: item.clouds.all,
-        };
-      }
-    }
-
-    return {
-      message: '5-day forecast fetched successfully',
-      source: 'openweathermap',
-      city: d.city.name,
-      country: d.city.country,
-      coordinates: { lat: d.city.coord.lat, lon: d.city.coord.lon },
-      forecast: Object.values(dailyMap),
-    };
-  }
-
-
   private async getCurrentWeatherFromWttr(query: WeatherQueryDto) {
-    const location = query.city
-      ? encodeURIComponent(query.city)
-      : `${query.lat},${query.lon}`;
+
 
     try {
       const response = await firstValueFrom(
@@ -235,7 +177,9 @@ export class WeatherService {
         message: 'Weather fetched successfully',
         source: 'wttr.in',
         weather: {
-          city: area?.areaName?.[0]?.value ?? query.city ?? 'Unknown',
+          // When lat/lon is used, areaName is a neighbourhood → use region (actual city).
+          // When a city name is used, areaName is the searched city → prefer it.
+          city: area?.region?.[0]?.value ?? area?.areaName?.[0]?.value ?? 'Unknown',
           country: area?.country?.[0]?.value ?? '',
           date: new Date().toISOString(),
           temperature: Number(cur.temp_C),
@@ -267,56 +211,4 @@ export class WeatherService {
     }
   }
 
-  private async getForecastFromWttr(query: WeatherQueryDto) {
-    const location = query.city
-      ? encodeURIComponent(query.city)
-      : `${query.lat},${query.lon}`;
-
-    try {
-      const response = await firstValueFrom(
-        this.http.get(`${this.wttrBaseUrl}/${location}?format=j1`),
-      );
-      const d = response.data;
-      const area = d.nearest_area?.[0];
-
-      const forecast = (d.weather as any[]).map((day: any) => {
-        // Pick noon hourly slot (index 4 = time "1200")
-        const noon = day.hourly?.find((h: any) => h.time === '1200') ?? day.hourly?.[0] ?? {};
-        const code = noon.weatherCode ?? '113';
-
-        return {
-          date: day.date,
-          temperature: Number(day.avgtempC),
-          tempMin: Number(day.mintempC),
-          tempMax: Number(day.maxtempC),
-          condition: this.codeToCondition(code),
-          description: noon.weatherDesc?.[0]?.value ?? '',
-          icon: this.codeToIconUrl(code),
-          windSpeed: Number(noon.windspeedKmph ?? 0),
-          humidity: Number(noon.humidity ?? 0),
-          cloudiness: Number(noon.cloudcover ?? 0),
-          chanceOfRain: Number(noon.chanceofrain ?? 0),
-          sunrise: day.astronomy?.[0]?.sunrise ?? '',
-          sunset: day.astronomy?.[0]?.sunset ?? '',
-        };
-      });
-
-      return {
-        message: '3-day forecast fetched successfully',
-        source: 'wttr.in',
-        city: area?.areaName?.[0]?.value ?? query.city ?? 'Unknown',
-        country: area?.country?.[0]?.value ?? '',
-        coordinates: {
-          lat: Number(area?.latitude ?? query.lat ?? 0),
-          lon: Number(area?.longitude ?? query.lon ?? 0),
-        },
-        forecast,
-      };
-    } catch (error) {
-      if (error?.response?.status === 404) {
-        throw new BadRequestException('City not found');
-      }
-      throw new InternalServerErrorException('Failed to fetch forecast data');
-    }
-  }
 }
