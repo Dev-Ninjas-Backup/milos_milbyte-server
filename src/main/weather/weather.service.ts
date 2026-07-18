@@ -51,7 +51,7 @@ export class WeatherService {
 
     const owmKey = process.env.OPENWEATHER_API_KEY;
 
-    if (!owmKey || owmKey === 'your_openweathermap_api_key_here') {
+    if (!owmKey) {
       this.logger.error('[Weather] OpenWeatherMap API key is not configured');
       throw new NotFoundException(
         'Weather service is temporarily unavailable due to configuration error',
