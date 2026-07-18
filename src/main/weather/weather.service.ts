@@ -171,7 +171,7 @@ export class WeatherService {
       // Nominatim returns { error: '...' } when nothing is found
       if (data?.error) {
         throw new BadRequestException(
-          `The coordinates (${lat}, ${lon}) do not correspond to any known location on the map.`,
+          `This location is not known to our Map`,
         );
       }
 
@@ -182,14 +182,11 @@ export class WeatherService {
 
       if (waterTypes.some(w => locationType.includes(w)) || locationClass === 'waterway') {
         throw new BadRequestException(
-          `The coordinates (${lat}, ${lon}) point to a body of water, not a habitable location.`,
+          `This location is not known to our Map`,
         );
       }
     } catch (err) {
-      // Re-throw our own exceptions as-is
       if (err instanceof BadRequestException) throw err;
-
-      // Network/timeout errors → skip validation silently (don't block weather fetch)
       this.logger.warn(`Nominatim reverse geocoding failed (skipping validation): ${err?.message}`);
     }
   }

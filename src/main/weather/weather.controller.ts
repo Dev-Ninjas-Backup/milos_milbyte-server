@@ -9,9 +9,9 @@ export class WeatherController {
   constructor(private readonly weatherService: WeatherService) { }
 
   @ApiOperation({
-    summary: 'Get current weather for a city or coordinates',
+    summary: 'Get current weather for a coordinates',
     description:
-      'Pass either `city` (e.g. "Dhaka") or both `lat` and `lon`. ' +
+      'Pass `lat` and `lon`. ' +
       'Returns temperature (°C), condition, wind speed (km/h), humidity (%), cloudiness (%) — exactly what the weather card needs.',
   })
   @Get('current')
