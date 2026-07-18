@@ -119,6 +119,9 @@ export class WeatherService {
       );
     }
 
+    // ── Validate that coordinates map to a real location (not ocean/invalid) ────
+    await this.validateCoordinates(lat, lon);
+
     const owmKey = process.env.OPENWEATHER_API_KEY;
 
     // ── Try OpenWeatherMap ──────────────────────────────────────────────────────
@@ -141,6 +144,55 @@ export class WeatherService {
     return await this.getCurrentWeatherFromWttr(query);
   }
 
+
+  /**
+   * Calls Nominatim reverse geocoding to verify the coordinates point to a real
+   * named location. Throws BadRequestException if the location is ocean/water or
+   * if Nominatim cannot resolve it to any known place.
+   */
+  private async validateCoordinates(lat: number, lon: number): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get('https://nominatim.openstreetmap.org/reverse', {
+          params: {
+            format: 'json',
+            lat: String(lat),
+            lon: String(lon),
+          },
+          headers: {
+            // Nominatim requires a User-Agent header
+            'User-Agent': 'MilosMilbyteWeatherApp/1.0',
+          },
+        }),
+      );
+
+      const data = response.data;
+
+      // Nominatim returns { error: '...' } when nothing is found
+      if (data?.error) {
+        throw new BadRequestException(
+          `The coordinates (${lat}, ${lon}) do not correspond to any known location on the map.`,
+        );
+      }
+
+      // Reject pure water bodies (ocean, sea, bay, strait, etc.)
+      const waterTypes = ['ocean', 'sea', 'bay', 'strait', 'gulf', 'lake', 'river', 'water', 'reservoir'];
+      const locationType: string = (data?.type ?? data?.addresstype ?? '').toLowerCase();
+      const locationClass: string = (data?.class ?? '').toLowerCase();
+
+      if (waterTypes.some(w => locationType.includes(w)) || locationClass === 'waterway') {
+        throw new BadRequestException(
+          `The coordinates (${lat}, ${lon}) point to a body of water, not a habitable location.`,
+        );
+      }
+    } catch (err) {
+      // Re-throw our own exceptions as-is
+      if (err instanceof BadRequestException) throw err;
+
+      // Network/timeout errors → skip validation silently (don't block weather fetch)
+      this.logger.warn(`Nominatim reverse geocoding failed (skipping validation): ${err?.message}`);
+    }
+  }
 
   private async getCurrentWeatherFromOWM(query: WeatherQueryDto, apiKey: string) {
     const params: Record<string, string> = { appid: apiKey, units: 'metric' };
