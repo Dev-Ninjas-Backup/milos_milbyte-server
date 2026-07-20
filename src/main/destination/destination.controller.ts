@@ -34,7 +34,7 @@ type AuthenticatedRequest = Request & {
 @ApiTags('Destinations')
 @Controller('destination')
 export class DestinationController {
-  constructor(private readonly destinationService: DestinationService) {}
+  constructor(private readonly destinationService: DestinationService) { }
 
   @ApiTags('Admin')
   @UseGuards(AuthGuard, RolesGuard)
@@ -51,6 +51,33 @@ export class DestinationController {
   @Get()
   async findAll(@Query() query: DestinationQueryDto) {
     return await this.destinationService.findAll(query);
+  }
+
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save a destination to user wishlist' })
+  @Post('saved')
+  async saveDestination(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: SaveDestinationDto,
+  ) {
+    return await this.destinationService.saveDestination(
+      Number(req.user.sub),
+      dto,
+    );
+  }
+
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all saved destinations of logged-in user' })
+  @Get('saved')
+  async getSavedDestinations(@Req() req: AuthenticatedRequest) {
+    console.log(req.user);
+    return await this.destinationService.getSavedDestinations(
+      Number(req.user.sub),
+    );
   }
 
   @ApiTags('Public')
@@ -81,31 +108,5 @@ export class DestinationController {
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return await this.destinationService.remove(id);
-  }
-
-  @ApiTags('User')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Save a destination to user wishlist' })
-  @Post('saved')
-  async saveDestination(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: SaveDestinationDto,
-  ) {
-    return await this.destinationService.saveDestination(
-      Number(req.user.sub),
-      dto,
-    );
-  }
-
-  @ApiTags('User')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all saved destinations of logged-in user' })
-  @Get('saved')
-  async getSavedDestinations(@Req() req: AuthenticatedRequest) {
-    return await this.destinationService.getSavedDestinations(
-      Number(req.user.sub),
-    );
   }
 }

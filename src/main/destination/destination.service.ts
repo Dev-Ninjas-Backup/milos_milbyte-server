@@ -12,7 +12,7 @@ import { UpdateDestinationDto } from './dto/update-destination.dto';
 
 @Injectable()
 export class DestinationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(createDestinationDto: CreateDestinationDto) {
     const existing = await this.prisma.destination.findFirst({
@@ -45,19 +45,19 @@ export class DestinationService {
       AND: [
         query.name
           ? {
-              name: {
-                contains: query.name,
-                mode: 'insensitive',
-              },
-            }
+            name: {
+              contains: query.name,
+              mode: 'insensitive',
+            },
+          }
           : {},
         query.location
           ? {
-              location: {
-                contains: query.location,
-                mode: 'insensitive',
-              },
-            }
+            location: {
+              contains: query.location,
+              mode: 'insensitive',
+            },
+          }
           : {},
       ],
     };
@@ -165,6 +165,13 @@ export class DestinationService {
   }
 
   async getSavedDestinations(userId: number) {
+    const userExist = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!userExist) {
+      throw new NotFoundException('User not found');
+    }
     const savedDestinations = await this.prisma.userSavedDestination.findMany({
       where: { userId },
       include: { destination: true },
