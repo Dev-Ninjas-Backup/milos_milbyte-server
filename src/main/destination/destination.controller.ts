@@ -74,9 +74,23 @@ export class DestinationController {
   @ApiOperation({ summary: 'Get all saved destinations of logged-in user' })
   @Get('saved')
   async getSavedDestinations(@Req() req: AuthenticatedRequest) {
-    console.log(req.user);
     return await this.destinationService.getSavedDestinations(
       Number(req.user.sub),
+    );
+  }
+
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unsave/Remove a destination from user wishlist' })
+  @Delete('saved/:destinationId')
+  async removeSavedDestination(
+    @Req() req: AuthenticatedRequest,
+    @Param('destinationId', ParseIntPipe) destinationId: number,
+  ) {
+    return await this.destinationService.removeSavedDestination(
+      Number(req.user.sub),
+      destinationId,
     );
   }
 

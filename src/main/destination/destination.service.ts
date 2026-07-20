@@ -183,4 +183,45 @@ export class DestinationService {
       savedDestinations,
     };
   }
+
+  async removeSavedDestination(userId: number, destinationId: number) {
+    const userExist = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!userExist) {
+      throw new NotFoundException('User not found');
+    }
+
+    const destinationExist = await this.prisma.destination.findUnique({
+      where: { id: destinationId },
+    });
+
+    if (!destinationExist) {
+      throw new NotFoundException('Destination not found');
+    }
+
+    const existing = await this.prisma.userSavedDestination.findUnique({
+      where: {
+        userId_destinationId: {
+          userId,
+          destinationId,
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Saved destination not found in your list');
+    }
+
+    await this.prisma.userSavedDestination.delete({
+      where: {
+        id: existing.id,
+      },
+    });
+
+    return {
+      message: 'Destination unsaved successfully',
+    };
+  }
 }
