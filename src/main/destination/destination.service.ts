@@ -192,15 +192,6 @@ export class DestinationService {
     if (!userExist) {
       throw new NotFoundException('User not found');
     }
-
-    const destinationExist = await this.prisma.destination.findUnique({
-      where: { id: destinationId },
-    });
-
-    if (!destinationExist) {
-      throw new NotFoundException('Destination not found');
-    }
-
     const existing = await this.prisma.userSavedDestination.findUnique({
       where: {
         userId_destinationId: {
