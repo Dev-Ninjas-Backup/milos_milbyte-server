@@ -110,7 +110,7 @@ export class WeatherService {
       message: 'Weather fetched successfully',
       source: 'openweathermap',
       weather: {
-        city: d.name,
+        city,
         country: this.getCountryName(d.sys.country),
         date: new Date().toISOString(),
         temperature: Math.round(d.main.temp),
