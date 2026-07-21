@@ -22,18 +22,14 @@ export class TripController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new trip (default status PLANNING)' })
-  create(@Req() req: any, @Body() createTripDto: CreateTripDto) {
-    return this.tripService.create(Number(req.user.sub), createTripDto);
+  async create(@Req() req: any, @Body() createTripDto: CreateTripDto) {
+    return await this.tripService.create(Number(req.user.sub), createTripDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all user trips' })
   @ApiQuery({ name: 'status', enum: TripStatus, required: false })
-  findAll(@Req() req: any, @Query('status') status?: TripStatus) {
-    return this.tripService.findAll(Number(req.user.sub), status);
+  async findAll(@Req() req: any, @Query('status') status?: TripStatus) {
+    return await this.tripService.findAll(Number(req.user.sub), status);
   }
-
-
-
-
 }
