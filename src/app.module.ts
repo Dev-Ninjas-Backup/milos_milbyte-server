@@ -18,6 +18,7 @@ import { FlightModule } from './main/flight/flight.module';
 import { HotelModule } from './main/hotel/hotel.module';
 import { NotificationModule } from './main/notification/notification.module';
 import { WeatherModule } from './main/weather/weather.module';
+import { TripModule } from './main/trip/trip.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { WeatherModule } from './main/weather/weather.module';
     HotelModule,
     NotificationModule,
     WeatherModule,
+    TripModule,
   ],
   controllers: [AppController],
   providers: [AppService],

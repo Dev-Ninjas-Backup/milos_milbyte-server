@@ -73,3 +73,9 @@ enum DevicePlatform {
   WEB
   MOBILE
 }
+
+enum TripStatus {
+  PLANNING
+  UPCOMING
+  COMPLETED
+}

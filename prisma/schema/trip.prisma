@@ -1,0 +1,12 @@
+model Trip {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  destinationId Int
+  status        TripStatus  @default(PLANNING)
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}

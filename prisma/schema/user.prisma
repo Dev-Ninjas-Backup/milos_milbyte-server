@@ -20,7 +20,7 @@ model User {
   forgotPasswordOtp          String?
   forgotPasswordOtpExpiresAt DateTime?
 
-  trips         String?
+  trips         Trip[]
   points        Int                @default(0)
   totalSpent    Float              @default(0)
   subscriptions UserSubscription[]
