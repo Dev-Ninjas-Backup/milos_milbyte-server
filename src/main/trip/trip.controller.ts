@@ -5,13 +5,11 @@ import {
   Body,
   UseGuards,
   Req,
-  Query,
+  Param,
 } from '@nestjs/common';
 import { TripService } from './trip.service';
-import { CreateTripDto } from './dto/create-trip.dto';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { TripStatus } from '@prisma/client';
 
 @ApiTags('Trip')
 @UseGuards(AuthGuard)
@@ -20,16 +18,26 @@ import { TripStatus } from '@prisma/client';
 export class TripController {
   constructor(private readonly tripService: TripService) { }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new trip (default status PLANNING)' })
-  async create(@Req() req: any, @Body() createTripDto: CreateTripDto) {
-    return await this.tripService.create(Number(req.user.sub), createTripDto);
+
+  @Get('my-trip-plan')
+  @ApiOperation({ summary: 'Get all user planning sessions' })
+  async findAll(@Req() req: any) {
+    return await this.tripService.findAll(Number(req.user.sub));
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all user trips' })
-  @ApiQuery({ name: 'status', enum: TripStatus, required: false })
-  async findAll(@Req() req: any, @Query('status') status?: TripStatus) {
-    return await this.tripService.findAll(Number(req.user.sub), status);
+
+  @Get('my-trip-plan/:sessionId')
+  @ApiOperation({ summary: 'Get a planning details for a specific session ID`' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  async findSubmittedMessagesBySessionId(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ) {
+    return await this.tripService.findSubmittedMessagesBySessionId(
+      Number(req.user.sub),
+      sessionId,
+    );
   }
+
+
 }
