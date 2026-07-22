@@ -26,7 +26,7 @@ export class TripController {
   }
 
 
-  @Get('my-trip-plan/:sessionId')
+  @Get('my-trip-plan-details/:sessionId')
   @ApiOperation({ summary: 'Get a planning details for a specific session ID`' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
   async findSubmittedMessagesBySessionId(
