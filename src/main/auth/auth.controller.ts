@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Delete,
   UseGuards,
   Req,
   HttpCode,
@@ -139,6 +140,14 @@ export class AuthController {
     );
   }
 
-
+  // ================= DELETE MY ACCOUNT =================
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete own account (soft delete)' })
+  @Delete('soft-delete')
+  async deleteMyAccount(@Req() req: AuthenticatedRequest) {
+    return await this.authService.deleteMyAccount(req.user.sub);
+  }
 
 }

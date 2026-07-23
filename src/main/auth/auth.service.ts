@@ -83,7 +83,9 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
+    if (user.isDeleted) {
+      throw new UnauthorizedException('Your account has been deleted. Contact support for assistance.');
+    }
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
@@ -318,6 +320,30 @@ export class AuthService {
     return {
       message: 'Profile updated successfully',
       user: this.sanitizeUser(updatedUser),
+    };
+  }
+
+  // ================= DELETE MY ACCOUNT =================
+  async deleteMyAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: Number(userId) },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isDeleted) {
+      throw new BadRequestException('Account is already deleted');
+    }
+
+    await this.prisma.user.update({
+      where: { id: Number(userId) },
+      data: { isDeleted: true },
+    });
+
+    return {
+      message: 'Your account has been deleted successfully',
     };
   }
 
