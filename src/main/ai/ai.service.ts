@@ -126,7 +126,7 @@ export class AiService {
       message: sendMessageDto.message,
       session_id: session.sessionId,
       user_id: String(userId),
-      subscription_plan: 'pro',
+      subscription_plan: activeSubscriptionPlan.planType,
     };
 
     this.logger.debug(`[AI] Payload sent to AI service: ${JSON.stringify(payload)}`);
@@ -215,7 +215,7 @@ export class AiService {
    */
   async getAllSessions(userId: number) {
     this.logger.log(`[AI] Fetching all sessions for userId=${userId}`);
-    
+
     // Query sessions and pre-fetch the messages ordered chronologically
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
@@ -262,7 +262,7 @@ export class AiService {
    */
   async getAllSessionSuggestionsForUser(userId: number) {
     this.logger.log(`[AI] Fetching all suggestions for userId=${userId}`);
-    
+
     // Load sessions including their associated message list (chronological order)
     const sessions = await this.prisma.aiSession.findMany({
       where: { userId },
@@ -315,7 +315,7 @@ export class AiService {
    */
   async getSessionAllMessagesById(userId: number, sessionId: string) {
     this.logger.log(`[AI] Fetching messages for sessionId=${sessionId} userId=${userId}`);
-    
+
     // Find the session and load all associated messages chronologically
     const session = await this.prisma.aiSession.findFirst({
       where: {
@@ -525,16 +525,16 @@ export class AiService {
       },
       initial_message: initialMessage
         ? {
-            message_id: initialMessage.id,
-            client_message: initialMessage.clientMessage,
-            ai_message: initialMessage.aiMessage,
-            current_step: initialMessage.currentStep,
-            is_edited: initialMessage.isEdited,
-            edited_at: initialMessage.editedAt,
-            original_message: initialMessage.originalMessage,
-            created_at: initialMessage.createdAt,
-            updated_at: initialMessage.updatedAt,
-          }
+          message_id: initialMessage.id,
+          client_message: initialMessage.clientMessage,
+          ai_message: initialMessage.aiMessage,
+          current_step: initialMessage.currentStep,
+          is_edited: initialMessage.isEdited,
+          edited_at: initialMessage.editedAt,
+          original_message: initialMessage.originalMessage,
+          created_at: initialMessage.createdAt,
+          updated_at: initialMessage.updatedAt,
+        }
         : null,
     };
   }
@@ -549,7 +549,7 @@ export class AiService {
    */
   async deleteSession(userId: number, sessionId: string) {
     this.logger.log(`[AI] Deleting session sessionId=${sessionId} userId=${userId}`);
-    
+
     // Confirm the session exists and belongs to the user before deleting
     const session = await this.prisma.aiSession.findFirst({
       where: {

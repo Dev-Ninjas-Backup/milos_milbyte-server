@@ -23,12 +23,10 @@ async function bootstrap() {
   });
 
 
-  // Serve uploads directory with /uploads prefix
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
   });
 
-  // Serve public/ folder at root (for notification-test.html & firebase-messaging-sw.js)
   app.useStaticAssets(join(process.cwd(), 'public'));
 
 
