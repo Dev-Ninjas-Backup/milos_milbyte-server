@@ -77,15 +77,18 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
+    if (user.isDeleted === true) {
+      throw new UnauthorizedException('Your account has been deleted. Contact support for assistance.');
+    }
+    if (user.isBolocked === true) {
+      throw new UnauthorizedException('Your account has been blocked. Contact support for assistance.');
+    }
     const isPasswordValid = await compare(loginDto.password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (user.isDeleted) {
-      throw new UnauthorizedException('Your account has been deleted. Contact support for assistance.');
-    }
+
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
@@ -328,7 +331,6 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: Number(userId) },
     });
-
     if (!user) {
       throw new NotFoundException('User not found');
     }
