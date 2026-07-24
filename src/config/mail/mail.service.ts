@@ -442,137 +442,124 @@ export class MailService {
             display:inline-flex;
             align-items:center;
             justify-content:center;
-            width:52px;
-            height:64px;
+            width:48px;
+            height:60px;
             margin:0 4px;
             border-radius:12px;
-            background:linear-gradient(145deg,#1e1e3a,#2a2a4a);
-            border:1px solid rgba(99,102,241,0.4);
-            color:#a5b4fc;
-            font-size:32px;
+            background:rgba(255, 255, 255, 0.08);
+            border:1px solid rgba(255, 255, 255, 0.18);
+            color:#ffffff;
+            font-size:28px;
             font-weight:700;
             font-family:'Courier New',monospace;
-            letter-spacing:0;
-            box-shadow:0 4px 15px rgba(99,102,241,0.2),inset 0 1px 0 rgba(255,255,255,0.05);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
           ">${d}</span>`,
       )
       .join('');
 
-    const bodyHtml = `
-      <!-- OTP card -->
-      <div style="
-        background:linear-gradient(145deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));
-        border:1px solid rgba(99,102,241,0.2);
-        border-radius:16px;
-        padding:28px 24px;
-        text-align:center;
-        margin-bottom:20px;
-      ">
-        <p style="margin:0 0 20px;font-size:12px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:2px;">
-          Your Verification Code
-        </p>
-        <div style="display:inline-flex;justify-content:center;flex-wrap:nowrap;">
-          ${otpDigits}
-        </div>
-        <div style="margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="9" stroke="#6366f1" stroke-width="2"/>
-            <path d="M12 7V12L15 15" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span style="font-size:13px;color:#64748b;">
-            Expires in <strong style="color:#8b5cf6;">10 minutes</strong>
-          </span>
-        </div>
-      </div>
+    const year = new Date().getFullYear();
 
-      <!-- Warning -->
-      <div style="
-        background:rgba(239,68,68,0.07);
-        border:1px solid rgba(239,68,68,0.2);
-        border-left:3px solid #ef4444;
-        border-radius:10px;
-        padding:14px 18px;
-        margin-bottom:20px;
-        display:flex;align-items:flex-start;gap:10px;
-      ">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px;">
-          <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.54 21H20.46A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z"
-            stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div>
-          <p style="margin:0 0 3px;font-size:13px;font-weight:600;color:#f87171;">Never share this code</p>
-          <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">
-            If you didn't attempt to sign in, your account may be at risk.
-            Please <a href="#" style="color:#f87171;text-decoration:underline;">secure your account</a> immediately.
-          </p>
-        </div>
-      </div>
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Two-Factor Authentication</title>
+</head>
+<body style="margin:0;padding:0;background-color:#02191d;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;">
 
-      <!-- Security tip cards -->
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td width="50%" style="padding:0 6px 0 0;">
-            <div style="
-              background:rgba(255,255,255,0.02);
-              border:1px solid rgba(255,255,255,0.06);
-              border-radius:10px;
-              padding:14px;
-            ">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 22s8-4 8-10V5L12 2 4 5v7c0 6 8 10 8 10z" stroke="#6366f1" stroke-width="2"/>
-                </svg>
-                <span style="font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:1px;">Single Use</span>
-              </div>
-              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">
-                This code can only be used once and expires automatically.
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#02191d;padding:48px 16px;">
+    <tr>
+      <td align="center">
+
+        <!-- Card Container -->
+        <table width="100%" style="max-width:520px;border-radius:28px;overflow:hidden;
+          background:linear-gradient(165deg, #093b3f 0%, #04272a 40%, #021a1d 100%);
+          border:1px solid rgba(45, 212, 191, 0.25);
+          box-shadow:0 24px 80px rgba(0,0,0,0.6);">
+
+          <tr>
+            <td align="center" style="padding:48px 36px 36px;">
+
+              <!-- Header -->
+              <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
+                Two-Factor Authentication
+              </h1>
+              <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.5;">
+                Hi <strong style="color:#ffffff;">${params.name}</strong>, here is your secure login code.
               </p>
-            </div>
-          </td>
-          <td width="50%" style="padding:0 0 0 6px;">
-            <div style="
-              background:rgba(255,255,255,0.02);
-              border:1px solid rgba(255,255,255,0.06);
-              border-radius:10px;
-              padding:14px;
-            ">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="#8b5cf6" stroke-width="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#8b5cf6" stroke-width="2"/>
-                </svg>
-                <span style="font-size:11px;font-weight:600;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;">Stay Safe</span>
+
+              <!-- Verification Code Card -->
+              <div style="margin-top:32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px 20px;text-align:center;">
+                <p style="margin:0 0 20px;font-size:12px;font-weight:600;color:#2dd4bf;text-transform:uppercase;letter-spacing:2px;">
+                  YOUR VERIFICATION CODE
+                </p>
+                
+                <div style="display:inline-flex;justify-content:center;align-items:center;">
+                  ${otpDigits}
+                </div>
+
+                <p style="margin:20px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">
+                  Expires in: <strong style="color:#ffffff;">10 minutes</strong>
+                </p>
               </div>
-              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.4;">
-                We will never ask for this code via email or phone.
-              </p>
-            </div>
-          </td>
-        </tr>
-      </table>
-    `;
 
-    const iconSvg = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L3 7V12C3 16.97 7.02 21.61 12 23C16.98 21.61 21 16.97 21 12V7L12 2Z"
-        fill="url(#shieldGrad)" stroke="rgba(165,180,252,0.6)" stroke-width="0.5"/>
-      <path d="M9 12L11 14L15 10" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <defs>
-        <linearGradient id="shieldGrad" x1="3" y1="2" x2="21" y2="23" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.6"/>
-          <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.4"/>
-        </linearGradient>
-      </defs>
-    </svg>`;
+              <!-- Warning Box -->
+              <div style="margin-top:24px;background:rgba(220,38,38,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:20px 22px;text-align:left;">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1.5px;">
+                  NEVER SHARE THIS CODE
+                </p>
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;">
+                  If you didn't attempt to sign in, your account may be at risk. Please <a href="#" style="color:#f87171;text-decoration:underline;">secure your account</a> immediately.
+                </p>
+              </div>
 
-    const html = this.buildEmailHtml({
-      title: 'Your 2FA Code',
-      iconSvg,
-      iconGradientStart: 'rgba(99,102,241,0.2)',
-      iconGradientEnd: 'rgba(139,92,246,0.2)',
-      heading: 'Two-Factor Authentication',
-      subheading: `Hi <strong style="color:#a5b4fc;">${params.name}</strong>, here is your secure login code.`,
-      bodyHtml,
-    });
+              <!-- Two Columns -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+                <tr>
+                  <td width="50%" style="padding-right:6px;" valign="top">
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 16px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1.5px;">
+                        SINGLE USE
+                      </p>
+                      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;">
+                        This code can only be used once and expires automatically.
+                      </p>
+                    </div>
+                  </td>
+                  <td width="50%" style="padding-left:6px;" valign="top">
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 16px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1.5px;">
+                        STAY SAFE
+                      </p>
+                      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;">
+                        We will never ask for this code via email or phone.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <div style="margin-top:40px;text-align:center;">
+                <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,0.4);">
+                  This is an automated security email. Please do not reply.
+                </p>
+                <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.3);">
+                  © ${year} Your Company. All rights reserved.
+                </p>
+              </div>
+
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
 
     try {
       await this.transporter.sendMail({
@@ -608,7 +595,7 @@ export class MailService {
       'If you did not request a password reset, please ignore this email or contact support.',
     ].join('\n');
 
-    // OTP digit boxes (same style as 2FA)
+    // OTP digit boxes
     const otpDigits = params.otp
       .split('')
       .map(
@@ -617,143 +604,124 @@ export class MailService {
             display:inline-flex;
             align-items:center;
             justify-content:center;
-            width:52px;
-            height:64px;
+            width:48px;
+            height:60px;
             margin:0 4px;
             border-radius:12px;
-            background:linear-gradient(145deg,#1e1e3a,#2a2a4a);
-            border:1px solid rgba(99,102,241,0.4);
-            color:#a5b4fc;
-            font-size:32px;
+            background:rgba(255, 255, 255, 0.08);
+            border:1px solid rgba(255, 255, 255, 0.18);
+            color:#ffffff;
+            font-size:28px;
             font-weight:700;
             font-family:'Courier New',monospace;
-            letter-spacing:0;
-            box-shadow:0 4px 15px rgba(99,102,241,0.2),inset 0 1px 0 rgba(255,255,255,0.05);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
           ">${d}</span>`,
       )
       .join('');
 
-    const bodyHtml = `
-      <!-- OTP card -->
-      <div style="
-        background:linear-gradient(145deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));
-        border:1px solid rgba(99,102,241,0.2);
-        border-radius:16px;
-        padding:28px 24px;
-        text-align:center;
-        margin-bottom:20px;
-      ">
-        <p style="margin:0 0 20px;font-size:12px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:2px;">
-          Password Reset Code
-        </p>
-        <div style="display:inline-flex;justify-content:center;flex-wrap:nowrap;">
-          ${otpDigits}
-        </div>
-        <div style="margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="9" stroke="#6366f1" stroke-width="2"/>
-            <path d="M12 7V12L15 15" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span style="font-size:13px;color:#64748b;">
-            Expires in <strong style="color:#8b5cf6;">10 minutes</strong>
-          </span>
-        </div>
-      </div>
+    const year = new Date().getFullYear();
 
-      <!-- Steps info -->
-      <div style="
-        background:rgba(255,255,255,0.02);
-        border:1px solid rgba(255,255,255,0.06);
-        border-radius:14px;
-        padding:16px 20px;
-        margin-bottom:20px;
-      ">
-        <p style="margin:0 0 12px;font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:1.5px;">How to reset</p>
-        <table width="100%" cellpadding="0" cellspacing="0">
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Reset Your Password</title>
+</head>
+<body style="margin:0;padding:0;background-color:#02191d;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#02191d;padding:48px 16px;">
+    <tr>
+      <td align="center">
+
+        <!-- Card Container -->
+        <table width="100%" style="max-width:520px;border-radius:28px;overflow:hidden;
+          background:linear-gradient(165deg, #093b3f 0%, #04272a 40%, #021a1d 100%);
+          border:1px solid rgba(45, 212, 191, 0.25);
+          box-shadow:0 24px 80px rgba(0,0,0,0.6);">
+
           <tr>
-            <td style="padding:5px 0;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <span style="
-                  display:inline-flex;align-items:center;justify-content:center;
-                  width:22px;height:22px;border-radius:50%;
-                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
-                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
-                ">1</span>
-                <span style="font-size:13px;color:#94a3b8;">Enter the OTP code above</span>
+            <td align="center" style="padding:48px 36px 36px;">
+
+              <!-- Header -->
+              <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
+                Reset Your Password
+              </h1>
+              <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.5;">
+                Hi <strong style="color:#ffffff;">${params.name}</strong>, use the code below to reset your password.
+              </p>
+
+              <!-- Verification Code Card -->
+              <div style="margin-top:32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px 20px;text-align:center;">
+                <p style="margin:0 0 20px;font-size:12px;font-weight:600;color:#2dd4bf;text-transform:uppercase;letter-spacing:2px;">
+                  PASSWORD RESET CODE
+                </p>
+                
+                <div style="display:inline-flex;justify-content:center;align-items:center;">
+                  ${otpDigits}
+                </div>
+
+                <p style="margin:20px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">
+                  Expires in: <strong style="color:#ffffff;">10 minutes</strong>
+                </p>
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:5px 0;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <span style="
-                  display:inline-flex;align-items:center;justify-content:center;
-                  width:22px;height:22px;border-radius:50%;
-                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
-                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
-                ">2</span>
-                <span style="font-size:13px;color:#94a3b8;">Choose a strong new password</span>
+
+              <!-- Warning Box -->
+              <div style="margin-top:24px;background:rgba(220,38,38,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:20px 22px;text-align:left;">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1.5px;">
+                  NEVER SHARE THIS CODE
+                </p>
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;">
+                  If you didn't request a password reset, your account is safe. Please <a href="#" style="color:#f87171;text-decoration:underline;">secure your account</a> immediately if concerned.
+                </p>
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:5px 0;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <span style="
-                  display:inline-flex;align-items:center;justify-content:center;
-                  width:22px;height:22px;border-radius:50%;
-                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
-                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
-                ">3</span>
-                <span style="font-size:13px;color:#94a3b8;">Sign in with your new password</span>
+
+              <!-- Two Columns -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+                <tr>
+                  <td width="50%" style="padding-right:6px;" valign="top">
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 16px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1.5px;">
+                        SINGLE USE
+                      </p>
+                      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;">
+                        This code can only be used once and expires automatically.
+                      </p>
+                    </div>
+                  </td>
+                  <td width="50%" style="padding-left:6px;" valign="top">
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 16px;text-align:left;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1.5px;">
+                        STAY SAFE
+                      </p>
+                      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.4;">
+                        We will never ask for this code via email or phone.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <div style="margin-top:40px;text-align:center;">
+                <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,0.4);">
+                  This is an automated security email. Please do not reply.
+                </p>
+                <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.3);">
+                  © ${year} Your Company. All rights reserved.
+                </p>
               </div>
+
             </td>
           </tr>
         </table>
-      </div>
 
-      <!-- Security notice -->
-      <div style="
-        background:rgba(239,68,68,0.07);
-        border:1px solid rgba(239,68,68,0.2);
-        border-left:3px solid #ef4444;
-        border-radius:10px;
-        padding:14px 18px;
-        margin-bottom:20px;
-        display:flex;align-items:flex-start;gap:10px;
-      ">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px;">
-          <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.54 21H20.46A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z"
-            stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">
-          Didn't request this? <strong style="color:#f87171;">Ignore this email</strong> — your password will remain unchanged.
-          If you're concerned, <a href="#" style="color:#f87171;text-decoration:underline;">contact support</a>.
-        </p>
-      </div>
-    `;
+      </td>
+    </tr>
+  </table>
 
-    const iconSvg = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-      <rect x="5" y="11" width="14" height="10" rx="2" fill="url(#lockGrad)" stroke="rgba(165,180,252,0.5)" stroke-width="0.5"/>
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="12" cy="16" r="1.5" fill="#a5b4fc"/>
-      <defs>
-        <linearGradient id="lockGrad" x1="5" y1="11" x2="19" y2="21" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.7"/>
-          <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.5"/>
-        </linearGradient>
-      </defs>
-    </svg>`;
-
-    const html = this.buildEmailHtml({
-      title: 'Reset Your Password',
-      iconSvg,
-      iconGradientStart: 'rgba(99,102,241,0.2)',
-      iconGradientEnd: 'rgba(139,92,246,0.2)',
-      heading: 'Reset Your Password',
-      subheading: `Hi <strong style="color:#a5b4fc;">${params.name}</strong>, use the code below to reset your password.`,
-      bodyHtml,
-    });
+</body>
+</html>`;
 
     try {
       await this.transporter.sendMail({
