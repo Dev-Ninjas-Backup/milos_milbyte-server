@@ -590,5 +590,185 @@ export class MailService {
       throw error;
     }
   }
-}
 
+  // ─────────────────────────────────────────────────────────────
+  //  FORGOT PASSWORD OTP EMAIL
+  // ─────────────────────────────────────────────────────────────
+  async sendForgotPasswordEmail(params: { to: string; name: string; otp: string }) {
+    const subject = 'Reset Your Password — OTP Code';
+
+    // Plain-text fallback
+    const text = [
+      `Hello ${params.name},`,
+      '',
+      `Your password reset OTP is: ${params.otp}`,
+      '',
+      'This code is valid for 10 minutes.',
+      '',
+      'If you did not request a password reset, please ignore this email or contact support.',
+    ].join('\n');
+
+    // OTP digit boxes (same style as 2FA)
+    const otpDigits = params.otp
+      .split('')
+      .map(
+        (d) =>
+          `<span style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:52px;
+            height:64px;
+            margin:0 4px;
+            border-radius:12px;
+            background:linear-gradient(145deg,#1e1e3a,#2a2a4a);
+            border:1px solid rgba(99,102,241,0.4);
+            color:#a5b4fc;
+            font-size:32px;
+            font-weight:700;
+            font-family:'Courier New',monospace;
+            letter-spacing:0;
+            box-shadow:0 4px 15px rgba(99,102,241,0.2),inset 0 1px 0 rgba(255,255,255,0.05);
+          ">${d}</span>`,
+      )
+      .join('');
+
+    const bodyHtml = `
+      <!-- OTP card -->
+      <div style="
+        background:linear-gradient(145deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05));
+        border:1px solid rgba(99,102,241,0.2);
+        border-radius:16px;
+        padding:28px 24px;
+        text-align:center;
+        margin-bottom:20px;
+      ">
+        <p style="margin:0 0 20px;font-size:12px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:2px;">
+          Password Reset Code
+        </p>
+        <div style="display:inline-flex;justify-content:center;flex-wrap:nowrap;">
+          ${otpDigits}
+        </div>
+        <div style="margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="#6366f1" stroke-width="2"/>
+            <path d="M12 7V12L15 15" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span style="font-size:13px;color:#64748b;">
+            Expires in <strong style="color:#8b5cf6;">10 minutes</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Steps info -->
+      <div style="
+        background:rgba(255,255,255,0.02);
+        border:1px solid rgba(255,255,255,0.06);
+        border-radius:14px;
+        padding:16px 20px;
+        margin-bottom:20px;
+      ">
+        <p style="margin:0 0 12px;font-size:11px;font-weight:600;color:#6366f1;text-transform:uppercase;letter-spacing:1.5px;">How to reset</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:5px 0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="
+                  display:inline-flex;align-items:center;justify-content:center;
+                  width:22px;height:22px;border-radius:50%;
+                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
+                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
+                ">1</span>
+                <span style="font-size:13px;color:#94a3b8;">Enter the OTP code above</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="
+                  display:inline-flex;align-items:center;justify-content:center;
+                  width:22px;height:22px;border-radius:50%;
+                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
+                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
+                ">2</span>
+                <span style="font-size:13px;color:#94a3b8;">Choose a strong new password</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="
+                  display:inline-flex;align-items:center;justify-content:center;
+                  width:22px;height:22px;border-radius:50%;
+                  background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
+                  font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0;
+                ">3</span>
+                <span style="font-size:13px;color:#94a3b8;">Sign in with your new password</span>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Security notice -->
+      <div style="
+        background:rgba(239,68,68,0.07);
+        border:1px solid rgba(239,68,68,0.2);
+        border-left:3px solid #ef4444;
+        border-radius:10px;
+        padding:14px 18px;
+        margin-bottom:20px;
+        display:flex;align-items:flex-start;gap:10px;
+      ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:2px;">
+          <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18A2 2 0 003.54 21H20.46A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z"
+            stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">
+          Didn't request this? <strong style="color:#f87171;">Ignore this email</strong> — your password will remain unchanged.
+          If you're concerned, <a href="#" style="color:#f87171;text-decoration:underline;">contact support</a>.
+        </p>
+      </div>
+    `;
+
+    const iconSvg = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="11" width="14" height="10" rx="2" fill="url(#lockGrad)" stroke="rgba(165,180,252,0.5)" stroke-width="0.5"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="16" r="1.5" fill="#a5b4fc"/>
+      <defs>
+        <linearGradient id="lockGrad" x1="5" y1="11" x2="19" y2="21" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.5"/>
+        </linearGradient>
+      </defs>
+    </svg>`;
+
+    const html = this.buildEmailHtml({
+      title: 'Reset Your Password',
+      iconSvg,
+      iconGradientStart: 'rgba(99,102,241,0.2)',
+      iconGradientEnd: 'rgba(139,92,246,0.2)',
+      heading: 'Reset Your Password',
+      subheading: `Hi <strong style="color:#a5b4fc;">${params.name}</strong>, use the code below to reset your password.`,
+      bodyHtml,
+    });
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromAddress,
+        to: params.to,
+        subject,
+        text,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send forgot password email to ${params.to}`,
+        error,
+      );
+      throw error;
+    }
+  }
+}

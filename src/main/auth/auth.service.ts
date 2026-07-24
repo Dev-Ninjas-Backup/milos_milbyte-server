@@ -16,6 +16,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { UpdateProfilePictureDto } from './dto/update-profile-picture.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { MailService } from '../../config/mail/mail.service';
+import { devOnly } from 'src/common/utils';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
   ) { }
+
 
   // ================= REGISTER =================
   async register(registerDto: RegisterDto) {
@@ -113,7 +115,9 @@ export class AuthService {
         twoFactorRequired: true,
         userId: user.id,
         // DEV ONLY: remove this line in production
-        ...(process.env.NODE_ENV !== 'production' && { otp }),
+        ...devOnly({ otp }),
+
+
       };
     }
 
@@ -234,14 +238,18 @@ export class AuthService {
       },
     });
 
-    // await this.mailService.sendMail({
-    //   to: email,
-    //   subject: 'Reset Password OTP',
-    //   html: `<h2>Your OTP is ${otp}</h2>`,
-    // });
+    await this.mailService.sendForgotPasswordEmail({
+      to: forgotPasswordDto.email,
+      name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+      otp,
+    });
+
+
 
     return {
-      otp: otp,
+      ...devOnly({ otp }),
+
+
       message: 'OTP sent successfully.',
     };
   }
