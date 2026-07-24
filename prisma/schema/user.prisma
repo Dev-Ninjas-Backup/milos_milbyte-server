@@ -20,6 +20,10 @@ model User {
   forgotPasswordOtp          String?
   forgotPasswordOtpExpiresAt DateTime?
 
+  twoFactorEnabled           Boolean   @default(false)
+  twoFactorOtp               String?
+  twoFactorOtpExpiresAt      DateTime?
+
   trips         Trip[]
   points        Int                @default(0)
   totalSpent    Float              @default(0)

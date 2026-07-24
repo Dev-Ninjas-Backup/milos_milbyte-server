@@ -23,6 +23,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserRoles } from '@prisma/client';
 import { verifyForgotPasswordOtp } from './dto/verifyForgotPasswordOtp.dto';
 import { newPasswordDto } from './dto/newPassword.dto';
+import { VerifyTwoFactorOtpDto } from './dto/verify-2fa-otp.dto';
+import { ToggleTwoFactorDto } from './dto/toggle-2fa.dto';
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -148,6 +150,27 @@ export class AuthController {
   @Delete('soft-delete')
   async deleteMyAccount(@Req() req: AuthenticatedRequest) {
     return await this.authService.deleteMyAccount(req.user.sub);
+  }
+
+  // ================= VERIFY 2FA OTP =================
+  @ApiTags('Public')
+  @ApiOperation({ summary: 'Verify 2FA OTP after login to receive access token' })
+  @Post('verify-2fa-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyTwoFactorOtp(@Body() body: VerifyTwoFactorOtpDto) {
+    return await this.authService.verifyTwoFactorOtp(body.userId, body.otp);
+  }
+
+  // ================= TOGGLE 2FA =================
+  @ApiTags('User')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Enable or disable two-factor authentication for current user' })
+  @Patch('toggle-2fa')
+  async toggleTwoFactor(
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return await this.authService.toggleTwoFactor(req.user.sub);
   }
 
 }

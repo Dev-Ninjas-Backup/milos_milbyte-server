@@ -15,16 +15,17 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { UpdateProfilePictureDto } from './dto/update-profile-picture.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { MailService } from '../../config/mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) { }
 
   // ================= REGISTER =================
-
   async register(registerDto: RegisterDto) {
     const userExists = await this.prisma.user.findUnique({
       where: { email: registerDto.email },
@@ -89,6 +90,33 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // ── 2FA check ──
+    if (user.twoFactorEnabled) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFactorOtp: otp,
+          twoFactorOtpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      await this.mailService.sendTwoFactorOtpEmail({
+        to: user.email,
+        name: user.firstName ?? user.email,
+        otp,
+      });
+
+      return {
+        message: 'Two-factor authentication required. OTP sent to your email.',
+        twoFactorRequired: true,
+        userId: user.id,
+        // DEV ONLY: remove this line in production
+        ...(process.env.NODE_ENV !== 'production' && { otp }),
+      };
+    }
+
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
@@ -97,6 +125,7 @@ export class AuthService {
 
     return {
       message: 'Login successful',
+      twoFactorRequired: false,
       accessToken,
       user: this.sanitizeUser(user),
     };
@@ -217,6 +246,7 @@ export class AuthService {
     };
   }
 
+  // ================= VERIFY FORGOT PASSWORD OTP =================
   async verifyForgotPasswordOtp(
     email: string,
     otp: string,
@@ -263,6 +293,7 @@ export class AuthService {
     };
   }
 
+  // ================= NEW PASSWORD =================
   async newPassword(
     resetToken: string,
     newPassword: string,
@@ -348,6 +379,87 @@ export class AuthService {
       message: 'Your account has been deleted successfully',
     };
   }
+
+
+  // ================= VERIFY 2FA OTP =================
+  async verifyTwoFactorOtp(userId: number, otp: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.twoFactorOtp || !user.twoFactorOtpExpiresAt) {
+      throw new BadRequestException('No pending 2FA OTP found. Please login again.');
+    }
+
+    if (user.twoFactorOtpExpiresAt < new Date()) {
+      throw new BadRequestException('2FA OTP has expired. Please login again.');
+    }
+
+    if (user.twoFactorOtp !== otp) {
+      throw new BadRequestException('Invalid 2FA OTP.');
+    }
+
+    // Clear OTP after successful verification
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        twoFactorOtp: null,
+        twoFactorOtpExpiresAt: null,
+      },
+    });
+
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return {
+      message: 'Two-factor authentication verified. Login successful.',
+      accessToken,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  // ================= TOGGLE 2FA =================
+  async toggleTwoFactor(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: Number(userId) },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const enable = !user.twoFactorEnabled;
+
+    if (user.twoFactorEnabled === enable) {
+      throw new BadRequestException(
+        `Two-factor authentication is already ${enable ? 'enabled' : 'disabled'}.`,
+      );
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: Number(userId) },
+      data: {
+        twoFactorEnabled: enable,
+        // Clear any pending OTP when toggling
+        twoFactorOtp: null,
+        twoFactorOtpExpiresAt: null,
+      },
+    });
+
+    return {
+      message: `Two-factor authentication has been ${enable ? 'enabled' : 'disabled'} successfully.`,
+      twoFactorEnabled: updatedUser.twoFactorEnabled,
+    };
+  }
+
+
+
 
   // ================= UTIL =================
   private sanitizeUser<T extends { password: string }>(user: T) {
