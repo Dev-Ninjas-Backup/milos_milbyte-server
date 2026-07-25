@@ -139,10 +139,10 @@ export class AiService {
     // 6. Handle rate limits based on subscription constraints
     if (aiResponseData.rate_limit_exceeded === true) {
       this.logger.warn(`[AI] Rate limit exceeded for userId=${userId} plan=${activeSubscriptionPlan.plan.name}`);
-      throw new HttpException(
-        `You are currently on the ${activeSubscriptionPlan.plan.name} plan. You have reached the AI message limit. Please upgrade to continue using the AI assistant.`,
-        429,
-      );
+      // throw new HttpException(
+      //   `You are currently on the ${activeSubscriptionPlan.plan.name} plan. You have reached the AI message limit. Please upgrade to continue using the AI assistant.`,
+      //   429,
+      // );
     }
 
     // 7. Inject client message and current subscription tier into response metadata
