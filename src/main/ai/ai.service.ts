@@ -8,15 +8,7 @@ import { aiResponse } from 'src/config/ai/ai-response';
 import { NotificationService } from 'src/main/notification/notification.service';
 import { NotificationType } from '@prisma/client';
 
-/**
- * Service handling all AI interaction operations, including:
- * - Initiating new AI chat sessions.
- * - Sending messages, querying external AI engines, and saving messages.
- * - Tracking and processing subscription limits/rate limiting.
- * - Generating user suggestions.
- * - Managing session histories (fetch & delete).
- * - Asynchronously notifying users of AI responses.
- */
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
