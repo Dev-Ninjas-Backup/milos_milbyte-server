@@ -252,8 +252,7 @@ export class AiService {
     }));
   }
 
-  /**
-   * Aggregates suggestions, extracted locations, and budgets across all AI sessions for a user.
+  /** 
    * Walks through the message history chronologically to get the latest non-null parameters.
    * 
    * @param userId - The ID of the user requesting suggestions.
