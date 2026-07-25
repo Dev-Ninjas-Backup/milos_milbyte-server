@@ -118,7 +118,8 @@ export class AiService {
       message: sendMessageDto.message,
       session_id: session.sessionId,
       user_id: String(userId),
-      subscription_plan: activeSubscriptionPlan.planType,
+      // subscription_plan: activeSubscriptionPlan.planType,
+      subscription_plan: 'pro',
     };
 
     this.logger.debug(`[AI] Payload sent to AI service: ${JSON.stringify(payload)}`);
@@ -428,10 +429,10 @@ export class AiService {
     const aiResponseData = await aiResponse(payload);
 
     if (aiResponseData.rate_limit_exceeded === true) {
-      // throw new HttpException(
-      //   `You are currently on the ${activeSubscriptionPlan.plan.name} plan. You have reached the AI message limit.`,
-      //   429,
-      // );
+      throw new HttpException(
+        `You are currently on the ${activeSubscriptionPlan.plan.name} plan. You have reached the AI message limit.`,
+        429,
+      );
     }
 
     // 5. Update the message: preserve original on first edit, update content
