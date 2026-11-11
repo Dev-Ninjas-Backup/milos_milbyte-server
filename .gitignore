@@ -17,6 +17,3 @@ config.bat
 solara-ai-9160d-firebase-adminsdk-fbsvc-01c25a924c.json
 firebase-service-account.json
 .gitignore
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
