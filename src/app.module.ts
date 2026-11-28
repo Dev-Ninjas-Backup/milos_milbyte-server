@@ -16,6 +16,7 @@ import { DisputeModule } from './main/dispute/dispute.module';
 
 import { FlightModule } from './main/flight/flight.module';
 import { HotelModule } from './main/hotel/hotel.module';
+import { AmadeusModule } from './main/amadeus/amadeus.module';
 import { NotificationModule } from './main/notification/notification.module';
 import { WeatherModule } from './main/weather/weather.module';
 import { TripModule } from './main/trip/trip.module';
@@ -36,6 +37,7 @@ import { TripModule } from './main/trip/trip.module';
     DisputeModule,
     FlightModule,
     HotelModule,
+    AmadeusModule,
     NotificationModule,
     WeatherModule,
     TripModule,
