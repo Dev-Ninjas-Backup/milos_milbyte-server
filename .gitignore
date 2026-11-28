@@ -17,3 +17,6 @@ config.bat
 solara-ai-9160d-firebase-adminsdk-fbsvc-01c25a924c.json
 firebase-service-account.json
 .gitignore
+
+# Real env file — never commit (loader trigger was committed here once)
+.env
